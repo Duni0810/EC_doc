@@ -1,0 +1,612 @@
+C51 COMPILER V7.06   CORE_MEMORY                                                           07/06/2010 09:59:40 PAGE 1   
+
+
+C51 COMPILER V7.06, COMPILATION OF MODULE CORE_MEMORY
+OBJECT MODULE PLACED IN SOURCE\CORE_MEMORY.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\c51.exe SOURCE\CORE_MEMORY.C LA WL(1) CD OT(8,SIZE) OR
+
+stmt level    source
+
+   1          /*-----------------------------------------------------------------------------
+   2           * Filename: CORE_MEMORY.C     For Chipset: ITE.IT85XX
+   3           *
+   4           * Function: Memory Definition for extern all code base reference
+   5           *
+   6           * [Memory Map Description]
+   7           *
+   8           * =Chip Internal= 0x00-0xFF
+   9           * 0x00-0xFF     For Kernel and Chip Level use
+  10           *
+  11           ***************************************************
+  12           * Chip 8500       : External ram 0x000-0x7FF
+  13           * Chip Other 85XX : External ram 0x000-0xFFF
+  14           ***************************************************
+  15           * Memory Map :
+  16           * 0x000-0x0FF   For Kernel Core/Module
+  17           * 0x100-0x1FF   OEM RAM        
+  18           * 0x200-0x2FF   OEM RAM
+  19           * 0x300-0x3FF   OEM RAM        
+  20           * 0x400-0x4FF   OEM RAM
+  21           * 0x500-0x5FF   OEM RAM        
+  22           * 0x600-0x6FF   For ITE flash utility,EC SPI rom read write function, and ramdebug function.
+  23           * 0x700-0x7FF   For Keil C Complier and Ram Code Space (for SPI programming).
+  24           * 0x800-0x8FF   OEM RAM 
+  25           * 0x800-0x9FF   OEM RAM 
+  26           * 0xA00-0xAFF   OEM RAM 
+  27           * 0xB00-0xBFF   OEM RAM  
+  28           * 0xC00-0xCFF   OEM RAM 
+  29           * 0xD00-0xDFF   OEM RAM 
+  30           * 0xE00-0xEFF   OEM RAM 
+  31           * 0xF00-0xFFF   OEM RAM    
+  32           *
+  33           * Copyright (c) 2006-2009, ITE Tech. Inc. All Rights Reserved.
+  34           *---------------------------------------------------------------------------*/
+  35          
+  36          //-----------------------------------------------------------------------------
+  37          // Common Header Include
+  38          //-----------------------------------------------------------------------------
+  39          #include "CORE_INCLUDE.H"
+  40          #include "OEM_INCLUDE.H"
+  41          
+  42          /*****************************************************************************/
+  43          /* 8032 BANK REGISTER RAM AREA  (0x00 ~ 0x1F) ********************************/
+  44          /*****************************************************************************/
+  45          // 0x00 - 0x1F for Chip R0-R7 Bank 0-3
+  46          
+  47          /*****************************************************************************/
+  48          /* INTERNAL BIT ADDRESS RAM AREA  (0x20 ~ 0x2F) ******************************/
+  49          /*****************************************************************************/
+  50          //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  51          volatile unsigned char bdata Ccb42          _at_ 0x20;
+  52          sbit Ccb42_INTR_KEY         = Ccb42^0;
+  53          sbit Ccb42_INTR_AUX         = Ccb42^1;
+  54          sbit Ccb42_SYS_FLAG         = Ccb42^2;
+  55          sbit Ccb42_RV1              = Ccb42^3;
+C51 COMPILER V7.06   CORE_MEMORY                                                           07/06/2010 09:59:40 PAGE 2   
+
+  56          sbit Ccb42_DISAB_KEY        = Ccb42^4;
+  57          sbit Ccb42_DISAB_AUX        = Ccb42^5;
+  58          sbit Ccb42_XLATE_PC         = Ccb42^6;
+  59          sbit Ccb42_RV2              = Ccb42^7;
+  60          
+  61          //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  62          volatile unsigned char bdata Ext_Cb0        _at_ 0x21;
+  63          sbit Ext_Cb0_ENABLE_SCAN    = Ext_Cb0^0;
+  64          sbit Ext_Cb0_EN_AUX_PORT1   = Ext_Cb0^1;
+  65          sbit Ext_Cb0_EN_AUX_PORT2   = Ext_Cb0^2;
+  66          sbit Ext_Cb0_EN_AUX_PORT3   = Ext_Cb0^3;
+  67          sbit Ext_Cb0_EN_AUX_PORT4   = Ext_Cb0^4;
+  68          sbit Ext_Cb0_PS2_AT         = Ext_Cb0^5;
+  69          sbit Ext_Cb0_PORT_CONTROL   = Ext_Cb0^6;
+  70          sbit Ext_Cb0_AUTO_SWITCH    = Ext_Cb0^7;
+  71          
+  72          //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  73          volatile unsigned char bdata Ext_Cb1        _at_ 0x22;
+  74          sbit FastA20                = Ext_Cb1^0;
+  75          sbit SST_SPI_FLAG           = Ext_Cb1^1;
+  76          sbit FORCE_NO_XLATE         = Ext_Cb1^2;
+  77          sbit bNumPad_OnlyWithFn     = Ext_Cb1^3;
+  78          sbit bNumPad_UpLayer        = Ext_Cb1^4;
+  79          sbit bKB_MATRIX_SENSE       = Ext_Cb1^5;
+  80          sbit PS2_next_data          = Ext_Cb1^6;
+  81          sbit bWaitED_Command        = Ext_Cb1^7;
+  82          
+  83          //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  84          volatile unsigned char bdata MULPX          _at_ 0x23;
+  85          sbit EnableTP                       = MULPX^0;
+  86          sbit MULPX_Mx_state2        = MULPX^1;
+  87          sbit MULPX_Mx_state3        = MULPX^2;
+  88          sbit MULPX_Multiplex        = MULPX^3;
+  89          sbit Read_MSDriver_ID       = MULPX^4;
+  90          sbit MULPX_RV1              = MULPX^5;
+  91          sbit MULPX_RV2              = MULPX^6;
+  92          sbit MULPX_RV3              = MULPX^7;
+  93          
+  94          //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  95          volatile unsigned char bdata Led_Data       _at_ 0x24;
+  96          sbit Led_Data_SCROLL        = Led_Data^0;
+  97          sbit Led_Data_NUM           = Led_Data^1;
+  98          sbit Led_Data_CAPS          = Led_Data^2;
+  99          sbit Led_Data_OVL           = Led_Data^3;
+ 100          sbit Led_Data_LED4          = Led_Data^4;
+ 101          sbit Led_Data_LED5          = Led_Data^5;
+ 102          sbit Led_Data_LED6          = Led_Data^6;
+ 103          sbit Led_Data_LED7          = Led_Data^7;
+ 104          
+ 105          //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ 106          volatile unsigned char bdata Scanner_State  _at_ 0x25;
+ 107          sbit Scanner_State_NUM_LOCK = Scanner_State^0;
+ 108          sbit Scanner_State_LEFT     = Scanner_State^1;
+ 109          sbit Scanner_State_RIGHT    = Scanner_State^2;
+ 110          sbit Scanner_State_ALT      = Scanner_State^3;
+ 111          sbit Scanner_State_CONTROL  = Scanner_State^4;
+ 112          sbit Scanner_State_OVERLAY  = Scanner_State^5;
+ 113          sbit Scanner_State_FN       = Scanner_State^6;
+ 114          sbit Scanner_State_FN_SILENT= Scanner_State^7;
+ 115          
+ 116          //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ 117          volatile unsigned char bdata Service        _at_ 0x26;
+C51 COMPILER V7.06   CORE_MEMORY                                                           07/06/2010 09:59:40 PAGE 3   
+
+ 118          sbit F_Service_PCI          = Service^0;
+ 119          sbit F_Service_UNLOCK       = Service^1;
+ 120          sbit F_Service_SEND         = Service^2;
+ 121          sbit F_Service_Send_PS2     = Service^3;
+ 122          sbit F_Service_PS2_IRQ      = Service^4;
+ 123          sbit F_Service_PCI2         = Service^5;
+ 124          sbit F_Service_MS_5         = Service^6;
+ 125          sbit F_Service_KEYSCAN      = Service^7;
+ 126          
+ 127          //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ 128          volatile unsigned char bdata Service1       _at_ 0x27;
+ 129          sbit F_Service_PCI3         = Service1^0;
+ 130          sbit F_Service_CIR          = Service1^1;
+ 131          sbit F_Service_OEM_SRVC_3   = Service1^2;
+ 132          sbit F_Service_MainLoTimer  = Service1^3;
+ 133          sbit F_Service_OEM_LoTimer  = Service1^4;
+ 134          sbit F_Service_LPCRST       = Service1^5;
+ 135          sbit F_Service_OEM_SRVC_1   = Service1^6;
+ 136          sbit F_Service_OEM_SRVC_2   = Service1^7;
+ 137          
+ 138          //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ 139          volatile unsigned char bdata AuxScanFlagS   _at_ 0x28;
+ 140          sbit SendtoAUXFlag                      = AuxScanFlagS^0;       
+ 141          sbit ECSendtoAUXFlag        = AuxScanFlagS^1;
+ 142          sbit StartScanAUXDevice     = AuxScanFlagS^2;
+ 143          sbit StartENAUXDevice       = AuxScanFlagS^3;
+ 144          sbit AUXInterfaceBusy       = AuxScanFlagS^4;
+ 145          sbit AUXKBIFBusy            = AuxScanFlagS^5;
+ 146          sbit AuxScanFlagS_RV1       = AuxScanFlagS^6;
+ 147          sbit AuxScanFlagS_RV2       = AuxScanFlagS^7;
+ 148          
+ 149          //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ 150          volatile unsigned char bdata Gen_Info       _at_ 0x29;
+ 151          sbit Gen_Info_LED_CHANGE    = Gen_Info^0;
+ 152          sbit Gen_Info_TYPM_CHANGE   = Gen_Info^1;
+ 153          sbit bKB_CommandWaitData    = Gen_Info^2;
+ 154          sbit Gen_Info_SCAN_LOCKED   = Gen_Info^3;
+ 155          sbit Gen_Info_PASS_ENABLE   = Gen_Info^4;
+ 156          sbit Gen_Info_BREAK_AUXD    = Gen_Info^5;
+ 157          sbit Gen_Info_BREAK_AUXK    = Gen_Info^6;
+ 158          sbit Gen_Info_BREAK_SCAN    = Gen_Info^7;
+ 159          
+ 160          //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ 161          volatile unsigned char bdata AuxTestFlagS   _at_ 0x2A;
+ 162          sbit PS2StartBit            = AuxTestFlagS^0;
+ 163          sbit MouseDriverIn          = AuxTestFlagS^1;
+ 164          sbit KeyboardDriverIn       = AuxTestFlagS^2;
+ 165          sbit AUX2ByteCommand        = AuxTestFlagS^3;
+ 166          sbit AuxTestFlagS_RV1       = AuxTestFlagS^4;
+ 167          sbit AuxTestFlagS_RV2       = AuxTestFlagS^5;
+ 168          sbit AuxTestFlagS_RV3       = AuxTestFlagS^6;
+ 169          sbit AuxTestFlagS_RV4       = AuxTestFlagS^7;
+ 170          
+ 171          //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ 172          volatile unsigned char bdata SMBusFLAGs     _at_ 0x2B;
+ 173          sbit bSMBA_GetData          = SMBusFLAGs^0;
+ 174          sbit bSMBB_GetData          = SMBusFLAGs^1;
+ 175          sbit bSMBC_GetData          = SMBusFLAGs^2;
+ 176          sbit bSMBD_GetData          = SMBusFLAGs^3;
+ 177          sbit SMBusFLAGs_RV1         = SMBusFLAGs^4;
+ 178          sbit SMBusFLAGs_RV2         = SMBusFLAGs^5;
+ 179          sbit SMBusFLAGs_RV3         = SMBusFLAGs^6;
+C51 COMPILER V7.06   CORE_MEMORY                                                           07/06/2010 09:59:40 PAGE 4   
+
+ 180          sbit SMBusFLAGs_RV4         = SMBusFLAGs^7;
+ 181          
+ 182          //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ 183          volatile unsigned char bdata AuxCmdFLAGs    _at_ 0x2C;
+ 184          sbit bAUX_CMDF3_Invalid     = AuxCmdFLAGs^0;
+ 185          sbit bAUX_CMDD4_Invalid     = AuxCmdFLAGs^1;
+ 186          sbit bAUX1_TX_FAILED        = AuxCmdFLAGs^2;
+ 187          sbit bAUX1_CHECK_DATA       = AuxCmdFLAGs^3;
+ 188          sbit bAUX2_TX_FAILED        = AuxCmdFLAGs^4;
+ 189          sbit bAUX2_CHECK_DATA       = AuxCmdFLAGs^5;
+ 190          sbit bAUX3_TX_FAILED        = AuxCmdFLAGs^6;
+ 191          sbit bAUX3_CHECK_DATA       = AuxCmdFLAGs^7;
+ 192          
+ 193          // Reserved 0x2D,
+ 194          /*****************************************************************************/
+ 195          //      NOTE : 
+ 196          /*****************************************************************************/
+ 197          // Don't use bit addressble 0x2E and 0x2F.
+ 198          /*****************************************************************************/
+ 199          
+ 200          /*****************************************************************************/
+ 201          /*****************************************************************************/
+ 202          //      BIT ADDRESS END MARK
+ 203          //                          >>----------->
+ 204          //                                          DIRECT START MARK
+ 205          /*****************************************************************************/
+ 206          /*****************************************************************************/
+ 207          /* INTERNAL DIRECT RAM AREA       (0x30 ~ 0x7F) ******************************/
+ 208          /*****************************************************************************/
+ 209          //-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+ 210          IBYTE       _R1                             _at_ 0x30;
+ 211          IBYTE       _R2                             _at_ 0x31;
+ 212          IBYTE       _R3                             _at_ 0x32;
+ 213          IBYTE       _R4                             _at_ 0x33;
+ 214          IBYTE       _R5                             _at_ 0x34;
+ 215          IBYTE       _R6                             _at_ 0x35;
+ 216          IWORD       _W1                             _at_ 0x36;
+ 217          //-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+ 218          BITS_8      CORE_PMFLAG                     _at_ 0x38;
+ 219          BITS_8      CORE_OSFLAG                     _at_ 0x39;
+ 220          BITS_8      CORE_CONFIG1                    _at_ 0x3A;
+ 221          BITS_8      CORE_CONFIG2                    _at_ 0x3B;
+ 222          //-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+ 223          // Flag
+ 224          //-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+ 225          FLAGS       Flag                            _at_ 0x3C;  // 2 bytes
+ 226          TIMER       Timer_A                         _at_ 0x3E;
+ 227          TIMER       Timer_B                         _at_ 0x3F;
+ 228          //-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+ 229          data struct Sscan scan                      _at_ 0x40;
+ 230          data struct Sscan ex_scan                   _at_ 0x43;
+ 231          data union  Unew_keyl new_keyl              _at_ 0x46;
+ 232          data union  Unew_keyl ex_new_keyl           _at_ 0x47;
+ 233          data union  KEY new_keyh                    _at_ 0x48;
+ 234          data union  KEY ex_new_keyh                 _at_ 0x49;
+ 235          data union  KEY typematic                   _at_ 0x4A;
+ 236          data union  KEY ex_typematic                _at_ 0x4B;
+ 237          IBYTE       Fn_Make_Key1                    _at_ 0x4C;
+ 238          IBYTE       HostCMD                         _at_ 0x4D;
+ 239          IBYTE       SaveKBHICR                      _at_ 0x4E;
+ 240          
+ 241                          // Reserved 0x4F                
+C51 COMPILER V7.06   CORE_MEMORY                                                           07/06/2010 09:59:40 PAGE 5   
+
+ 242          //-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+ 243          IBYTE       SMBA_PinError                   _at_ 0x50;
+ 244          IBYTE       SMBB_PinError                   _at_ 0x51;
+ 245          IBYTE       SMBC_PinError                   _at_ 0x52;
+ 246          IBYTE       SMBD_PinError                   _at_ 0x53;
+ 247          IBYTE       SMB_Check_Timer                 _at_ 0x54;
+ 248          IBYTE       Tmp_Load                        _at_ 0x55;
+ 249          IBYTE       PM3Cmd                          _at_ 0x56;
+ 250          IBYTE       PM3Step                         _at_ 0x57;
+ 251          IBYTE       PM3Data                         _at_ 0x58;
+ 252          IBYTE       Timer0_Cnt                      _at_ 0x59;
+ 253          IBYTE       KB_Command                      _at_ 0x5A;
+ 254          IBYTE       PS2_ReTryCunt                   _at_ 0x5B;
+ 255                          // Reserved 0x5C ~ 0x5E
+ 256          IBYTE       Emulate8042Port                 _at_ 0x5F;
+ 257          //-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+ 258          IBYTE       KBHICmd                         _at_ 0x60;
+ 259          IBYTE       KBHIStep                        _at_ 0x61;
+ 260          IBYTE       KBHIData                        _at_ 0x62;
+ 261          IBYTE       PM1Cmd                          _at_ 0x63;
+ 262          IBYTE       PM1Step                         _at_ 0x64;
+ 263          IBYTE       PM1StepSP                       _at_ 0x65;
+ 264          IBYTE       PM1Data                         _at_ 0x66;
+ 265          IBYTE       PM1Data1                        _at_ 0x67;
+ 266          IBYTE       PM1Data2                        _at_ 0x68;
+ 267          IBYTE       PM2Cmd                          _at_ 0x69;
+ 268          IBYTE       PM2Step                         _at_ 0x6A;
+ 269          IBYTE       PM2Data                         _at_ 0x6B;
+ 270          //-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+ 271          IBYTE       *data Tmp_Pntr                  _at_ 0x6C;
+ 272          //-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+ 273          #define MAX_SCAN_LINES      19      //(0x6D ~ 0x7F)
+ 274          IBYTE       bscan_matrix[MAX_SCAN_LINES]    _at_ 0x6D;
+ 275          // 19 Bytes for key scan (0x6D ~ 0x7F)
+ 276          //-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+ 277          
+ 278          /*****************************************************************************/
+ 279          /*****************************************************************************/
+ 280          //      DIRECT END MARK
+ 281          //                          >>----------->
+ 282          //                                          INDIRECT START MARK
+ 283          /*****************************************************************************/
+ 284          /* INTERNAL INDIRECT RAM AREA     (0x80 ~ 0xFF) ******************************/
+ 285          /*****************************************************************************/
+ 286          //----------------------------------------------------------------------------
+ 287          // Internal ram variables (Indirect)[0x80-0xCF]
+ 288          //----------------------------------------------------------------------------
+ 289          //PS2 Port Service
+ 290          IIBYTE          AUXInactiveCounter                              _at_ 0x80;
+ 291          IIBYTE          CheckAUXIndex                                   _at_ 0x81;
+ 292          IIBYTE          TPResolution                                    _at_ 0x82;
+ 293          IIBYTE          TPSamplingRate                                  _at_ 0x83;
+ 294          IIBYTE          PS2_IRQ_Channel                                 _at_ 0x84;
+ 295          IIBYTE          TPACKCounter                                    _at_ 0x85;
+ 296          IIBYTE      AUXCmdFFCnt                                     _at_ 0x86;
+ 297          IIBYTE      AUXPortNum                                      _at_ 0x87;
+ 298          IIBYTE      AuxFlags[3]                                     _at_ 0x88;  
+ 299          IIBYTE      MousePendingBuf                                     _at_ 0x8B;
+ 300          IIBYTE      ScanAUXStepIndex                _at_ 0x8C; 
+ 301          IIBYTE      AuxFlags2[3]                    _at_ 0x8D;  
+ 302          
+ 303          IIBYTE      MS_ID_CUNT                      _at_ 0x90; 
+C51 COMPILER V7.06   CORE_MEMORY                                                           07/06/2010 09:59:40 PAGE 6   
+
+ 304          IIBYTE      MS_DRIVER_TYPE                  _at_ 0x91; 
+ 305          IIBYTE      KB_ACK_DELAY_CUNT               _at_ 0x92;
+ 306          IIBYTE      KB_CodeSet                      _at_ 0x93;
+ 307          IIBYTE      PS2KB_Typematic                 _at_ 0x94;
+ 308          IIBYTE      PS2IFAck                        _at_ 0x95;   
+ 309          IIBYTE      Save_Typematic                  _at_ 0x96;
+ 310          IIBYTE      PS2PortxData[3]                         _at_ 0x97;  
+ 311          IIBYTE      KB_Typematic                    _at_ 0x9A;
+ 312          IIBYTE      Main_MOUSE_CHN                  _at_ 0x9B;
+ 313          IIBYTE      Main_KB_CHN                     _at_ 0x9C;
+ 314          IIBYTE      Main_KB_ACK_CUNT                _at_ 0x9D;
+ 315          IIBYTE      AUX_SCAN_INDEX                  _at_ 0x9E;
+ 316          IIBYTE      AUX_SCAN_INDEX_HS               _at_ 0x9F;
+ 317          
+ 318          IIBYTE      AUX_SCAN_TIMEOUT_CUNT           _at_ 0xA0;
+ 319          IIBYTE      SKIP_AUX_SCAN_CUNT              _at_ 0xA1;
+ 320          IIBYTE      AuxFlags_KB_CMD[3]                      _at_ 0xA2;  
+ 321          IIBYTE      AuxFlags_MS_CMD[3]                      _at_ 0xA5;  
+ 322          IIBYTE      AuxScanWDT                              _at_ 0xA8;  
+ 323          IIBYTE      SMBUS_STATUS                    _at_ 0xA9;
+ 324          IIBYTE          PS2_SSIRQ_Channel                           _at_ 0xAA;
+ 325          IIBYTE          PS2_KBCmd_BK                            _at_ 0xAB;
+ 326          //--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- -
+ 327          IIBYTE      _FlashCMD                       _at_ 0xAC;
+ 328          IIBYTE      _SEND                           _at_ 0xAD;
+ 329          BYTE code       *idata Tmp_code_pointer             _at_ 0xAE;
+ 330          
+ 331          IIBYTE      RamCodePort                     _at_ 0xB0;
+ 332          IIBYTE      RunCodeInRamCount               _at_ 0xB1;
+ 333          IIBYTE      ExitRamCodeCommand              _at_ 0xB2;
+ 334          //--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- -
+ 335          //Key Scan Service
+ 336          EXT_CB2       Ext_Cb2                       _at_ 0xB4;
+ 337          key_state     temp_scanner_state            _at_ 0xB5;
+ 338          XWORD *idata  Tmp_WPntr                     _at_ 0xB6;  //  2 bytes
+ 339          XBYTE *idata  Scanner_RAM_Pntr              _at_ 0xB8;  //  2 bytes
+ 340          XBYTE *idata  Extendkey_RAM_Pntr            _at_ 0xBA;  //  2 bytes
+ 341          //--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- -
+ 342          INT_VAR       Int_Var                       _at_ 0xBC;  //  2 bytes
+ 343          //--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- -
+ 344          XBYTE *idata  Tmp_XPntr                     _at_ 0xBE;  //  2 bytes
+ 345          //--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- -
+ 346          //16 Bytes for flashing SPI         0xC0 - 0xCF         // 16 bytes
+ 347          IIBYTE      SPIFlashData[16]                _at_ 0xC0;
+ 348          
+ 349          //--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- -
+ 350          //Stack                             0xD0 - 0xFF         // 48 bytes
+ 351          //
+ 352          // Don't use Idata (0xD0 ~ 0xFF).
+ 353          // Idata (0xD0 ~ 0xFF). for stack point.
+ 354          //--- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- -
+ 355          
+ 356          /*****************************************************************************/
+ 357          /*****************************************************************************/
+ 358          //      INTERNAL END MARK
+ 359          //                          >>----------->
+ 360          //                                          EXTERNAL START MARK
+ 361          /*****************************************************************************/
+ 362          /* EXTERNAL RAM AREA      (0x0000 ~ 0x00FF) **********************************/
+ 363          /*****************************************************************************/
+ 364          XBYTE   CORE_Version                        _at_ 0x0000;
+ 365          XBYTE   Oem_BBKVer                          _at_ 0x0001;
+C51 COMPILER V7.06   CORE_MEMORY                                                           07/06/2010 09:59:40 PAGE 7   
+
+ 366          XBYTE   Oem_CodeVer                         _at_ 0x0002;
+ 367          XBYTE   Oem_ModelVer                        _at_ 0x0003;
+ 368          XBYTE   Oem_SubVer                          _at_ 0x0004;
+ 369          XBYTE   Oem_PCBVer                          _at_ 0x0005;
+ 370          XBYTE   Oem_TestVer                         _at_ 0x0006;
+ 371          XBYTE   KeyboardMatrixID                    _at_ 0x0007;
+ 372          XBYTE   RSTStatus                           _at_ 0x0008;    // EC reset source. From RSTS Register (0x2006
+             -)
+ 373          // ~Reserved
+ 374          
+ 375          
+ 376          //-----------------------------------------------------------------------------
+ 377          #define SCI_MemBase         0x0010  //-0x001F
+ 378          #define EVENT_BUFFER_SIZE   9
+ 379          XBYTE   SCI_Event_Buffer[10]                _at_ SCI_MemBase+0x00;
+ 380          XBYTE   SCI_Event_In_Index                  _at_ SCI_MemBase+0x0A;
+ 381          XBYTE   SCI_Event_Out_Index                 _at_ SCI_MemBase+0x0B;
+ 382          XBYTE   SCI_StepTimer                       _at_ SCI_MemBase+0x0D;
+ 383          XBYTE   SCI_LastQueryEvent                  _at_ SCI_MemBase+0x0E;
+ 384          XBYTE   SCI_QueryEvent                      _at_ SCI_MemBase+0x0F;
+ 385          
+ 386          //-----------------------------------------------------------------------------
+ 387          #define SMI_MemBase         0x0020  //-0x002F
+ 388          #define EVENT_BUFFER_SIZE   9
+ 389          XBYTE   SMI_Event_Buffer[10]                _at_ SMI_MemBase+0x00;
+ 390          XBYTE   SMI_Event_In_Index                  _at_ SMI_MemBase+0x0A;
+ 391          XBYTE   SMI_Event_Out_Index                 _at_ SMI_MemBase+0x0B;
+ 392          XBYTE   SMI_StepTimer                       _at_ SMI_MemBase+0x0D;
+ 393          XBYTE   SMI_LastQueryEvent                  _at_ SMI_MemBase+0x0E;
+ 394          XBYTE   SMI_QueryEvent                      _at_ SMI_MemBase+0x0F;
+ 395          
+ 396          //-----------------------------------------------------------------------------
+ 397          #define Record_MemBase      0x0030  //-0x003F
+ 398          XBYTE   SCI_SMI_Event_Record[15]             _at_ Record_MemBase+0x00;
+ 399          //-----------------------------------------------------------------------------
+ 400          #define KBF_MemBase         0x0040  //-0x005F
+ 401          #define KBF_SIZE            16
+ 402          // Scanned keyboard buffer storage.
+ 403          XBYTE   bKEY_BUFF[KBF_SIZE]                 _at_ KBF_MemBase+0x00;
+ 404          // Keyboard password buffer storage.
+ 405          XBYTE   Pass_Buff[8]                        _at_ KBF_MemBase+0x10;
+ 406          XBYTE   Pass_Buff_Idx                       _at_ KBF_MemBase+0x18;
+ 407          XBYTE   Pass_On                             _at_ KBF_MemBase+0x19;
+ 408          XBYTE   Pass_Off                            _at_ KBF_MemBase+0x1A;
+ 409          XBYTE   Pass_Make1                          _at_ KBF_MemBase+0x1B;
+ 410          XBYTE   Pass_Make2                          _at_ KBF_MemBase+0x1C;
+ 411          XBYTE   diode_key                           _at_ KBF_MemBase+0x1D;
+ 412          XBYTE   PS_Debug_DeviceToEC                 _at_ KBF_MemBase+0x1E;
+ 413          XBYTE   PS_Debug_ECToHost                   _at_ KBF_MemBase+0x1F;
+ 414          
+ 415          //-----------------------------------------------------------------------------
+ 416          #define KBS_MemBase         0x0060  //-0x006F
+ 417          BYTE code *Scanner_Table_Pntr               _at_ KBS_MemBase+0x00;
+ 418          BYTE code *Extendkey_Table_Pntr             _at_ KBS_MemBase+0x02;
+ 419          XBYTE   bTMrepeat                           _at_ KBS_MemBase+0x04;
+ 420          XBYTE   bTMdelay                            _at_ KBS_MemBase+0x05;
+ 421          XBYTE   bTMcount                            _at_ KBS_MemBase+0x06;
+ 422          XBYTE   PendingSendTimer                    _at_ KBS_MemBase+0x07;
+ 423          XBYTE   KeyboardSendTimer                   _at_ KBS_MemBase+0x08;
+ 424          XBYTE   SCI_SMI_Index_Record                _at_ KBS_MemBase+0x09;
+ 425          XBYTE   PM3UnProcessCnt                     _at_ KBS_MemBase+0x0A;
+ 426          XBYTE   PM2UnProcessCnt                     _at_ KBS_MemBase+0x0B;
+C51 COMPILER V7.06   CORE_MEMORY                                                           07/06/2010 09:59:40 PAGE 8   
+
+ 427          XBYTE   ECUnProcessRec                      _at_ KBS_MemBase+0x0C;
+ 428          XBYTE   ECUnProcessCnt                      _at_ KBS_MemBase+0x0D;
+ 429          XBYTE   KBCUnProcessRec                     _at_ KBS_MemBase+0x0E;
+ 430          XBYTE   KBCUnProcessCnt                     _at_ KBS_MemBase+0x0F;
+ 431          
+ 432          //-----------------------------------------------------------------------------
+ 433          #define PS2_MemBase         0x0070  //-0x007F
+ 434          XBYTE   KBDataPending[3]                    _at_ PS2_MemBase+0x00;
+ 435          XBYTE   MSDataPending[3]                    _at_ PS2_MemBase+0x04;
+ 436          XBYTE   MXPortPending[3]                    _at_ PS2_MemBase+0x08;
+ 437          XBYTE   KBPendingRXCount                    _at_ PS2_MemBase+0x0C;
+ 438          XBYTE   KBPendingTXCount                    _at_ PS2_MemBase+0x0D;
+ 439          XBYTE   MSPendingRXCount                    _at_ PS2_MemBase+0x0E;
+ 440          XBYTE   MSPendingTXCount                    _at_ PS2_MemBase+0x0F;
+ 441          
+ 442          //-----------------------------------------------------------------------------
+ 443          #define SPI_MemBase         0x0080  //-0x008F
+ 444          XBYTE   SPIIDBuf[4]                                                     _at_ SPI_MemBase+0x00;  
+ 445          XBYTE   SPIIndex                                                        _at_ SPI_MemBase+0x04;  
+ 446          XBYTE   SPIAddrCycle[3]                                         _at_ SPI_MemBase+0x05;  
+ 447          XBYTE   SPIAEraseCmd                                            _at_ SPI_MemBase+0x08;  
+ 448          XBYTE   SPIReadStatus                                           _at_ SPI_MemBase+0x09;  
+ 449          XBYTE   SPIWriteStatus                                          _at_ SPI_MemBase+0x0A;  
+ 450          XBYTE   *SPIDataPointer                                         _at_ SPI_MemBase+0x0B;  
+ 451          XBYTE   SPIID                                                           _at_ SPI_MemBase+0x0D;  
+ 452          XBYTE   SPIReadIDCmd                                        _at_ SPI_MemBase+0x0E;      
+ 453          XBYTE   SSTDeviceID                         _at_ SPI_MemBase+0x0F;
+ 454          
+ 455          //-----------------------------------------------------------------------------
+ 456          #define HSPI_MemBase        0x0090  //-0x0097
+ 457          XBYTE   HSPI_SelfRamCode_Index              _at_ HSPI_MemBase+0x00;
+ 458          XBYTE   HSPI_tempcmd                        _at_ HSPI_MemBase+0x01;
+ 459          XBYTE   HSPI_FPT_timeout                    _at_ HSPI_MemBase+0x02;
+ 460          XBYTE   HSPI_Misc1                          _at_ HSPI_MemBase+0x03;
+ 461          XBYTE   Service_HSPI                        _at_ HSPI_MemBase+0x04;
+ 462          
+ 463          //-----------------------------------------------------------------------------
+ 464          #define PECI_MemBase        0x0098  //-0x009F
+ 465          XBYTE   PECI_CRC8                           _at_ PECI_MemBase+0x00; 
+ 466          XBYTE   PECI_CompletionCode                 _at_ PECI_MemBase+0x01;
+ 467          
+ 468          //-----------------------------------------------------------------------------
+ 469          #define CIR_MemBase         0x00B1  //-0x00B4
+ 470          XBYTE   CIRCounter                          _at_ CIR_MemBase+0x00;
+ 471          XBYTE   CIRPresentKey                       _at_ CIR_MemBase+0x01;
+ 472          XBYTE   CIRKeyOld                           _at_ CIR_MemBase+0x02;
+ 473          XBYTE   CIRKeyChange                        _at_ CIR_MemBase+0x03;
+ 474          
+ 475          //-----------------------------------------------------------------------------
+ 476          #define OEMHook_MemBase     0x00B5  //-0x00BF
+ 477          XBYTE   Timer5msCnt                         _at_ OEMHook_MemBase+0x00;
+ 478          XBYTE   Timer5msCntB                        _at_ OEMHook_MemBase+0x01;
+ 479          XBYTE   Timer100msCnt                       _at_ OEMHook_MemBase+0x02;
+ 480          XBYTE   Timer100msCntB                      _at_ OEMHook_MemBase+0x03;
+ 481          XBYTE   Timer100msCntC                      _at_ OEMHook_MemBase+0x04;
+ 482          XBYTE   Timer1SecCnt                        _at_ OEMHook_MemBase+0x05;
+ 483          XBYTE   Timer1MinCnt                        _at_ OEMHook_MemBase+0x06;
+ 484          XBYTE   Timer125msCnt                       _at_ OEMHook_MemBase+0x07;
+ 485          XBYTE   Timer250msCnt                       _at_ OEMHook_MemBase+0x08;
+ 486          XBYTE   TimerOEM_Cnt0                       _at_ OEMHook_MemBase+0x09;
+ 487          XBYTE   TimerOEM_Cnt1                       _at_ OEMHook_MemBase+0x0A;
+ 488          //-----------------------------------------------------------------------------
+C51 COMPILER V7.06   CORE_MEMORY                                                           07/06/2010 09:59:40 PAGE 9   
+
+ 489          #define GPIO_MemBase        0x00C0  //-0x00CF
+ 490          XBYTE   DEBOUNCE_FLAG1                      _at_ GPIO_MemBase+0x00;
+ 491          XBYTE   DEBOUNCE_FLAG2                      _at_ GPIO_MemBase+0x01;
+ 492          XBYTE   DEBOUNCE_CONT0                      _at_ GPIO_MemBase+0x02;
+ 493          XBYTE   DEBOUNCE_CONT1                      _at_ GPIO_MemBase+0x03;
+ 494          XBYTE   DEBOUNCE_CONT2                      _at_ GPIO_MemBase+0x04;
+ 495          XBYTE   DEBOUNCE_CONT3                      _at_ GPIO_MemBase+0x05;
+ 496          XBYTE   DEBOUNCE_CONT4                      _at_ GPIO_MemBase+0x06;
+ 497          XBYTE   DEBOUNCE_CONT5                      _at_ GPIO_MemBase+0x07;
+ 498          XBYTE   DEBOUNCE_CONT6                      _at_ GPIO_MemBase+0x08;
+ 499          XBYTE   DEBOUNCE_CONT7                      _at_ GPIO_MemBase+0x09;
+ 500          //      ~Reserved
+ 501          
+ 502          //-----------------------------------------------------------------------------
+ 503          #define ADC_MemBase         0x00D0  //-0x00EF
+ 504          XBYTE   ADC_FLAG                            _at_ ADC_MemBase+0x00;
+ 505          XBYTE   ADC_FLAG2                           _at_ ADC_MemBase+0x01;
+ 506          XBYTE   ADC_Timer                           _at_ ADC_MemBase+0x02;
+ 507          XBYTE   ADC_Timer2                          _at_ ADC_MemBase+0x03;
+ 508          //      ~Reserved
+ 509          XWORD   ADC_VCC                             _at_ ADC_MemBase+0x08;
+ 510          XWORD   ADC_VSTBY                           _at_ ADC_MemBase+0x0A;
+ 511          XWORD   ADC_AVCC                            _at_ ADC_MemBase+0x0C;
+ 512          XWORD   ADC_VBS                             _at_ ADC_MemBase+0x0E;
+ 513          XWORD   ADC_0                               _at_ ADC_MemBase+0x10;
+ 514          XWORD   ADC_1                               _at_ ADC_MemBase+0x12;
+ 515          XWORD   ADC_2                               _at_ ADC_MemBase+0x14;
+ 516          XWORD   ADC_3                               _at_ ADC_MemBase+0x16;
+ 517          XWORD   ADC_4                               _at_ ADC_MemBase+0x18;
+ 518          XWORD   ADC_5                               _at_ ADC_MemBase+0x1A;
+ 519          XWORD   ADC_6                               _at_ ADC_MemBase+0x1C;
+ 520          XWORD   ADC_7                               _at_ ADC_MemBase+0x1E;
+ 521          
+ 522          //-----------------------------------------------------------------------------
+ 523          #define FUNC_MemBase         0x00F0  //-0x00FF
+ 524          XWORD   Fan1RPM                             _at_ FUNC_MemBase+0x00;
+ 525          XWORD   Fan2RPM                             _at_ FUNC_MemBase+0x02;
+ 526          XBYTE   _HOTKEY_FLAG1S                      _at_ FUNC_MemBase+0x04;
+ 527          XBYTE   _HOTKEY_FLAG1H                      _at_ FUNC_MemBase+0x05;
+ 528          XBYTE   _HOTKEY_FLAG2S                      _at_ FUNC_MemBase+0x06;
+ 529          XBYTE   _HOTKEY_FLAG2H                      _at_ FUNC_MemBase+0x07;
+ 530          XBYTE   _HOTKEY_FLAG3S                      _at_ FUNC_MemBase+0x08;
+ 531          XBYTE   _HOTKEY_FLAG3H                      _at_ FUNC_MemBase+0x09;
+ 532          
+ 533          XBYTE   KeyScanKSI                          _at_ FUNC_MemBase+0x0A;
+ 534          XBYTE   KeyScanKSO                          _at_ FUNC_MemBase+0x0B;
+ 535          XBYTE   KeyScanACK                          _at_ FUNC_MemBase+0x0C;
+ 536          XBYTE   ExtKeyScanKSI                       _at_ FUNC_MemBase+0x0D;
+ 537          XBYTE   ExtKeyScanKSO                       _at_ FUNC_MemBase+0x0E;
+ 538          XBYTE   UtilityFlag                         _at_ FUNC_MemBase+0x0F;
+ 539          //-----------------------------------------------------------------------------
+ 540          /*****************************************************************************/
+ 541          /*****************************************************************************/
+ 542          // QUICK I/O CONTROL DEFINE
+ 543          /*****************************************************************************/
+ 544          /*****************************************************************************/
+ 545          /*****************************************************************************/
+ 546          EC_PORT_IO  _GPIOA          _at_ 0x1601;
+ 547          EC_PORT_IO  _GPIOB          _at_ 0x1602;
+ 548          EC_PORT_IO  _GPIOC          _at_ 0x1603;
+ 549          EC_PORT_IO  _GPIOD          _at_ 0x1604;
+ 550          EC_PORT_IO  _GPIOE          _at_ 0x1605;
+C51 COMPILER V7.06   CORE_MEMORY                                                           07/06/2010 09:59:40 PAGE 10  
+
+ 551          EC_PORT_IO  _GPIOF          _at_ 0x1606;
+ 552          EC_PORT_IO  _GPIOG          _at_ 0x1607;
+ 553          EC_PORT_IO  _GPIOH          _at_ 0x1608;
+ 554          EC_PORT_IO  _GPIOI          _at_ 0x1609;
+ 555          EC_PORT_IO  _GPIOJ          _at_ 0x160A;
+ 556          EC_PORT_IO  _GPIOK          _at_ 0x160B;
+ 557          EC_PORT_IO  _GPIOL          _at_ 0x160C;
+ 558          EC_PORT_IO  _GPIOM          _at_ 0x160D;
+ 559          //-----------------------------------------------------------------------------
+ 560          /*****************************************************************************/
+ 561          // END DEFINITION
+ 562          /*****************************************************************************/
+ 563          
+ 564          //-----------------------------------------------------------------------------
+ 565          
+C51 COMPILER V7.06   CORE_MEMORY                                                           07/06/2010 09:59:40 PAGE 11  
+
+ASSEMBLY LISTING OF GENERATED OBJECT CODE
+
+
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   ----    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

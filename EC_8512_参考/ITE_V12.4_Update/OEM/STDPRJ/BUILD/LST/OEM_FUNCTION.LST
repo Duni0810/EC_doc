@@ -1,0 +1,52 @@
+C51 COMPILER V7.06   OEM_FUNCTION                                                          07/06/2010 09:59:47 PAGE 1   
+
+
+C51 COMPILER V7.06, COMPILATION OF MODULE OEM_FUNCTION
+OBJECT MODULE PLACED IN SOURCE\OEM_FUNCTION.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\c51.exe SOURCE\OEM_FUNCTION.C LA WL(1) CD OT(8,SIZE) OR
+
+stmt level    source
+
+   1          /*-----------------------------------------------------------------------------
+   2           * Filename: OEM_FUNCTION.C
+   3           * Function: OEM Enhance Function Handle
+   4           *
+   5           * Copyright (c) 2006-2009, ITE Tech. Inc. All Rights Reserved.
+   6           *---------------------------------------------------------------------------*/
+   7          #include "CORE_INCLUDE.H"
+   8          #include "OEM_INCLUDE.H"
+   9          
+  10          
+  11          /*-----------------------------------------------------------------------------
+  12           * Local Parameter Definition
+  13           *---------------------------------------------------------------------------*/
+  14          //#define   XXX     X
+  15          
+  16          
+  17          //-----------------------------------------------------------------------------
+  18          //
+  19          //-----------------------------------------------------------------------------
+  20          
+  21          
+  22          /*-----------------------------------------------------------------------------
+  23           * End
+  24           *---------------------------------------------------------------------------*/
+C51 COMPILER V7.06   OEM_FUNCTION                                                          07/06/2010 09:59:47 PAGE 2   
+
+ASSEMBLY LISTING OF GENERATED OBJECT CODE
+
+
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   ----    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,3099 @@
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 1   
+
+
+C51 COMPILER V7.06, COMPILATION OF MODULE CORE_PECI
+OBJECT MODULE PLACED IN SOURCE\CORE_PECI.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\c51.exe SOURCE\CORE_PECI.C LA WL(1) CD OT(8,SIZE) OR
+
+stmt level    source
+
+   1          /*-----------------------------------------------------------------------------
+   2           * TITLE: CORE_PECI.C - PECI function  for KBC firmware.
+   3           *
+   4           * Copyright (c) 2010 - , ITE INC. All Rights Reserved.
+   5           *
+   6           * You may not reproduce, distribute, publish, display, perform, modify, adapt,
+   7           * transmit, broadcast, present, recite, release, license or otherwise exploit
+   8           * any part of this publication in any form, by any means, without the prior
+   9           * written permission of ITE INC. .
+  10           *---------------------------------------------------------------------------*/
+  11          #include "CORE_INCLUDE.H"
+  12          #include "OEM_INCLUDE.H"
+  13          
+  14          //-----------------------------------------------------------------------
+  15          // Enable PECI interface function
+  16          //-----------------------------------------------------------------------
+  17          void Init_PECI(void)
+  18          {
+  19   1          GPCRF6 = PALT;                      
+  20   1          GCR2 |= PECIE;      // Enable PECI
+  21   1      }
+  22          
+  23          //-----------------------------------------------------------------------
+  24          // Init timer1 for interface time-out
+  25          //-----------------------------------------------------------------------
+  26          void PECI_InitTimeOutTimer(void)
+  27          {
+  28   1          ET1 = 0;                    // Disable timer1 interrupt
+  29   1          TH1 = (0xFFFF-23076)>>8;    // Set timer1 counter 30ms
+  30   1          TL1 = (0xFFFF-23076);       // Set timer1 counter 30ms
+  31   1          TR1 = 1;                    // Enable timer1
+  32   1          TF1 = 0;                    // Clear overflow flag
+  33   1      }
+  34          
+  35          //-----------------------------------------------------------------------
+  36          // CRC-8 polynomial
+  37          //-----------------------------------------------------------------------
+  38          void PECI_CalcCRC8(BYTE sourcebyte)
+  39          {
+  40   1      #if PECI_Softwave_AWFCS    
+  41   1          BYTE temp;
+  42   1              PECI_CRC8 ^=sourcebyte;
+  43   1          temp = PECI_CRC8;
+  44   1      
+  45   1          if(IsFlag0(temp, BIT7))
+  46   1          {
+  47   2              temp = temp<<1;
+  48   2              PECI_CRC8 ^= temp;
+  49   2          }
+  50   1          else
+  51   1          {
+  52   2              temp = temp<<1;
+  53   2              PECI_CRC8 ^= 0x09;
+  54   2              PECI_CRC8 ^= temp;
+  55   2          }
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 2   
+
+  56   1          
+  57   1          if(IsFlag0(temp, BIT7))
+  58   1          {
+  59   2              temp = temp<<1;
+  60   2              PECI_CRC8 ^= temp;
+  61   2          }
+  62   1          else
+  63   1          {
+  64   2              temp = temp<<1;
+  65   2              PECI_CRC8 ^= 0x07;
+  66   2              PECI_CRC8 ^= temp;
+  67   2          }
+  68   1      #endif    
+  69   1      }
+  70          
+  71          //-----------------------------------------------------------------------
+  72          // Enables the PECI host controller.
+  73          //-----------------------------------------------------------------------
+  74          void PECI_HostEnable(void)
+  75          {
+  76   1          HOCTLR |= PECIHEN;
+  77   1      }
+  78          
+  79          //-----------------------------------------------------------------------
+  80          // Disable the PECI host controller.
+  81          //-----------------------------------------------------------------------
+  82          void PECI_HostDisable(void)
+  83          {
+  84   1          HOCTLR = 0x00;
+  85   1      }
+  86          
+  87          //-----------------------------------------------------------------------
+  88          // The PECI host controller will perform the desired transaction.
+  89          //-----------------------------------------------------------------------
+  90          void PECI_HostControl(BYTE control)
+  91          {
+  92   1          HOCTLR |= control;
+  93   1      }
+  94          
+  95          //-----------------------------------------------------------------------
+  96          // Check PECI interface busy or not
+  97          // return : 
+  98          //          0 : 30 ms time out
+  99          //          1 : OK
+ 100          //-----------------------------------------------------------------------
+ 101          BYTE PECI_CheckHostBusy(void)
+ 102          {
+ 103   1          PECI_InitTimeOutTimer();    
+ 104   1      
+ 105   1          while (!TF1)
+ 106   1              { 
+ 107   2              if(IsFlag0(HOSTAR, HOBY))
+ 108   2              {
+ 109   3                  TR1=0;
+ 110   3                  TF1=0;
+ 111   3                  break;
+ 112   3              }
+ 113   2          }
+ 114   1          
+ 115   1          if(TF1)
+ 116   1              {
+ 117   2              TR1=0;
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 3   
+
+ 118   2                      TF1=0;
+ 119   2              return(0);
+ 120   2          }
+ 121   1          return(1);
+ 122   1      }
+ 123          
+ 124          //-----------------------------------------------------------------------
+ 125          // Check PECI interface finish or not
+ 126          // return : 
+ 127          //          0 : time-out or error
+ 128          //          1 : finish
+ 129          //-----------------------------------------------------------------------
+ 130          BYTE PECI_CheckHostFinish(void)
+ 131          {
+ 132   1          BYTE error;
+ 133   1          BYTE status;
+ 134   1          error = 0x00;
+ 135   1          
+ 136   1          PECI_InitTimeOutTimer();
+ 137   1          while (!TF1)
+ 138   1              { 
+ 139   2              status = HOSTAR;
+ 140   2              if(IsFlag1(status, FINISH))
+ 141   2              {
+ 142   3                  TR1=0;
+ 143   3                  TF1=0;
+ 144   3                  break;
+ 145   3              }
+ 146   2              else if((status&=(BUSERR+EXTERR+WR_FCS_ERR+RD_FCS_ERR))!=0x00)
+ 147   2              {
+ 148   3                  error = 0x01;
+ 149   3                  break;
+ 150   3              }          
+ 151   2          }
+ 152   1          if((TF1)||(error==0x01))
+ 153   1              {
+ 154   2                      TF1=0;
+ 155   2                      TR1=0;
+ 156   2              return(0);
+ 157   2          }    
+ 158   1          return(1);
+ 159   1      }
+ 160          
+ 161          //-----------------------------------------------------------------------
+ 162          // The function of clearing Host Status Register
+ 163          //-----------------------------------------------------------------------
+ 164          void ResetPECIStatus(void)
+ 165          {
+ 166   1          HOSTAR = 0xFE;
+ 167   1      }
+ 168          
+ 169          //-----------------------------------------------------------------------
+ 170          // PECI Ping function
+ 171          //  return : 
+ 172          //              1 : The targeted address of processor is able to respond
+ 173          //              0 : no respond
+ 174          //  Input : 
+ 175          //              (1) addr : The address of processor
+ 176          //-----------------------------------------------------------------------
+ 177          BYTE PECI_Ping(BYTE addr)
+ 178          {
+ 179   1          BYTE done;
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 4   
+
+ 180   1          done = 0x00;
+ 181   1          
+ 182   1          PECI_HostEnable();
+ 183   1          HOTRADDR = addr;
+ 184   1          HOWRLR = 0x00;
+ 185   1          HORDLR = 0x00;
+ 186   1          
+ 187   1          if(PECI_CheckHostBusy())
+ 188   1          {
+ 189   2              PECI_HostControl(START+FCSERR_ABT);
+ 190   2              if(PECI_CheckHostFinish())
+ 191   2              {
+ 192   3                  done = 0x01;
+ 193   3              }
+ 194   2          }
+ 195   1      
+ 196   1          PECI_HostDisable();
+ 197   1          ResetPECIStatus();
+ 198   1          return(done);
+ 199   1      }
+ 200          
+ 201          //-----------------------------------------------------------------------
+ 202          // PECI get temperature command
+ 203          //  return : 
+ 204          //              1 : done
+ 205          //              0 : error
+ 206          //  Input : 
+ 207          //              (1) addr : The address of processor
+ 208          //              (2) *ReadData : the start address of variable to save data
+ 209          //-----------------------------------------------------------------------
+ 210          BYTE PECI_GetDIB(BYTE addr, XBYTE *ReadData)
+ 211          {
+ 212   1          BYTE done, index;
+ 213   1          done = 0x00;
+ 214   1          
+ 215   1          PECI_HostEnable();
+ 216   1          PECI_HostControl(FIFOCLR);
+ 217   1          HOTRADDR = addr;
+ 218   1          HOWRLR = 0x01;
+ 219   1          HORDLR = 0x08;
+ 220   1          HOCMDR = PECI_CMD_GetDIB;
+ 221   1          
+ 222   1          if(PECI_CheckHostBusy())
+ 223   1          {
+ 224   2              //PECI_HostControl(START+FCSERR_ABT+FIFOCLR);
+ 225   2              PECI_HostControl(START+FCSERR_ABT);
+ 226   2              if(PECI_CheckHostFinish())
+ 227   2              {
+ 228   3                  for(index=0x00;index<HORDLR;index++)
+ 229   3                  {
+ 230   4                      *(ReadData+index)=HORDDR;
+ 231   4                  }
+ 232   3                  done = 0x01;
+ 233   3              }
+ 234   2          }
+ 235   1      
+ 236   1          PECI_HostDisable();
+ 237   1          ResetPECIStatus();
+ 238   1          return(done);
+ 239   1      }
+ 240          
+ 241          //-----------------------------------------------------------------------
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 5   
+
+ 242          // PECI get temperature command
+ 243          //  return : 
+ 244          //              1 : done
+ 245          //              0 : error
+ 246          //  Input : 
+ 247          //              (1) addr : The address of processor
+ 248          //              (2) *ReadData : the start address of variable to save data
+ 249          //              (3) Domain : 0 or 1¡C 
+ 250          //                           0 : Domain 0, 1 : Domain 1¡C
+ 251          //-----------------------------------------------------------------------
+ 252          BYTE PECI_GetTemp(BYTE addr, XBYTE *ReadData, BYTE Domain)
+ 253          {
+ 254   1          BYTE done;
+ 255   1          done = 0x00;
+ 256   1          
+ 257   1          PECI_HostEnable();
+ 258   1          PECI_HostControl(FIFOCLR);
+ 259   1          HOTRADDR = addr;
+ 260   1          HOWRLR = 0x01;
+ 261   1          HORDLR = 0x02;
+ 262   1          if(Domain<2)
+ 263   1          {
+ 264   2              HOCMDR = PECI_CMD_GetTemp+Domain;
+ 265   2          }
+ 266   1          else
+ 267   1          {
+ 268   2              HOCMDR = PECI_CMD_GetTemp;
+ 269   2          }
+ 270   1          
+ 271   1          if(PECI_CheckHostBusy())
+ 272   1          {
+ 273   2              //PECI_HostControl(START+FCSERR_ABT+FIFOCLR);
+ 274   2              PECI_HostControl(START+FCSERR_ABT);
+ 275   2              if(PECI_CheckHostFinish())
+ 276   2              {
+ 277   3                  *ReadData=HORDDR;
+ 278   3                  *(++ReadData)=HORDDR;
+ 279   3                  done = 0x01;
+ 280   3              }
+ 281   2          }
+ 282   1      
+ 283   1          PECI_HostDisable();
+ 284   1          ResetPECIStatus();
+ 285   1          return(done);
+ 286   1      }
+ 287          
+ 288          //-----------------------------------------------------------------------
+ 289          // Read to the package configuration space (PCS) within the processor
+ 290          //  return : 
+ 291          //              1 : done
+ 292          //              0 : error
+ 293          //  Input : 
+ 294          //              (1) addr : The address of processor
+ 295          //              (2) *ReadData : the start address of variable to save data
+ 296          //              (3) Domain : 0 or 1¡C 
+ 297          //                           0 : Domain 0, 1 : Domain 1¡C
+ 298          //              (4) Retry   0 or 1
+ 299          //              (5) Index
+ 300          //              (6) LSB of parameter
+ 301          //              (7) MSB of parameter
+ 302          //              (8) ReadLen read length 2 or 3 or 5
+ 303          //-----------------------------------------------------------------------
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 6   
+
+ 304          BYTE PECI_RdPkgConfig(BYTE addr, XBYTE *ReadData, BYTE Domain, BYTE Retry, BYTE Index, BYTE LSB, BYTE MSB,
+             - BYTE ReadLen)
+ 305          {
+ 306   1          BYTE done, cunt;
+ 307   1          done = 0x00;
+ 308   1          
+ 309   1          PECI_HostEnable();
+ 310   1          PECI_HostControl(FIFOCLR);
+ 311   1          HOTRADDR = addr;
+ 312   1          HOWRLR = 0x05;
+ 313   1          HORDLR = ReadLen;
+ 314   1          if(Domain<2)
+ 315   1          {
+ 316   2              HOCMDR = PECI_CMD_RdPkgConfig+Domain;
+ 317   2          }
+ 318   1          else
+ 319   1          {
+ 320   2              HOCMDR = PECI_CMD_RdPkgConfig;
+ 321   2          }
+ 322   1      
+ 323   1          if(Retry<2)
+ 324   1          {
+ 325   2              HOWRDR = (PECI_HostID<<1)+Retry;
+ 326   2          }
+ 327   1          else
+ 328   1          {
+ 329   2              HOWRDR = (PECI_HostID<<1);
+ 330   2          }
+ 331   1          
+ 332   1          HOWRDR = Index;
+ 333   1          HOWRDR = LSB;
+ 334   1          HOWRDR = MSB;
+ 335   1              
+ 336   1          if(PECI_CheckHostBusy())
+ 337   1          {
+ 338   2              //PECI_HostControl(START+FCSERR_ABT+FIFOCLR);
+ 339   2              PECI_HostControl(START+FCSERR_ABT);
+ 340   2              if(PECI_CheckHostFinish())
+ 341   2              {
+ 342   3                  for(cunt=0x00;cunt<HORDLR;cunt++)
+ 343   3                  {
+ 344   4                      if(cunt==0x00)
+ 345   4                      {
+ 346   5                          PECI_CompletionCode = HORDDR;
+ 347   5                      }
+ 348   4                      else
+ 349   4                      {
+ 350   5                          *(ReadData+cunt-1)=HORDDR;
+ 351   5                      }
+ 352   4                  }
+ 353   3      
+ 354   3                  if(PECI_CompletionCode == PECI_CC_Valid)
+ 355   3                  {
+ 356   4                      done = 0x01;
+ 357   4                  }
+ 358   3                  else
+ 359   3                  {
+ 360   4                      done = 0x00;
+ 361   4                  }
+ 362   3              }
+ 363   2          }
+ 364   1      
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 7   
+
+ 365   1          PECI_HostDisable();
+ 366   1          ResetPECIStatus();
+ 367   1          return(done);
+ 368   1      }
+ 369          
+ 370          //-----------------------------------------------------------------------
+ 371          // Write to the package configuration space (PCS) within the processor
+ 372          //  return : 
+ 373          //              1 : done
+ 374          //              0 : error
+ 375          //  Input : 
+ 376          //              (1) addr : The address of processor
+ 377          //              (2) *WriteData : the start address of variable to wirte data
+ 378          //              (3) Domain : 0 or 1¡C 
+ 379          //                           0 : Domain 0, 1 : Domain 1¡C
+ 380          //              (4) Retry   0 or 1
+ 381          //              (5) Index
+ 382          //              (6) LSB of parameter
+ 383          //              (7) MSB of parameter
+ 384          //              (8) WriteLen write length 0x07 or 0x08 or 0x0A
+ 385          //-----------------------------------------------------------------------
+ 386          BYTE PECI_WrPkgConfig(BYTE addr, XBYTE *WriteData, BYTE Domain, BYTE Retry, BYTE Index, BYTE LSB, BYTE MSB
+             -, BYTE WriteLen)
+ 387          {
+ 388   1          BYTE done, cunt;
+ 389   1          done = 0x00;
+ 390   1          
+ 391   1          PECI_CompletionCode = 0x00;
+ 392   1          PECI_HostEnable();
+ 393   1          
+ 394   1          #if PECI_Softwave_AWFCS
+ 395   1          PECI_HostControl(FIFOCLR);
+ 396   1          PECI_CRC8 = 0x00;
+ 397   1          #else
+                  PECI_HostControl(FIFOCLR+AWFCS_EN);
+                  #endif
+ 400   1          
+ 401   1          HOTRADDR = addr;
+ 402   1          PECI_CalcCRC8(addr);
+ 403   1          HOWRLR = WriteLen;
+ 404   1          PECI_CalcCRC8(WriteLen);
+ 405   1          HORDLR = 0x01;
+ 406   1          PECI_CalcCRC8(0x01);
+ 407   1      
+ 408   1          if(Domain<2)
+ 409   1          {
+ 410   2              HOCMDR = PECI_CMD_WrPkgConfig+Domain;
+ 411   2              PECI_CalcCRC8(PECI_CMD_WrPkgConfig+Domain);
+ 412   2          }
+ 413   1          else
+ 414   1          {
+ 415   2              HOCMDR = PECI_CMD_WrPkgConfig;
+ 416   2              PECI_CalcCRC8(PECI_CMD_WrPkgConfig);
+ 417   2          }
+ 418   1      
+ 419   1          if(Retry<2)
+ 420   1          {
+ 421   2              HOWRDR = (PECI_HostID<<1)+Retry;
+ 422   2              PECI_CalcCRC8((PECI_HostID<<1)+Retry);
+ 423   2          }
+ 424   1          else
+ 425   1          {
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 8   
+
+ 426   2              HOWRDR = (PECI_HostID<<1);
+ 427   2              PECI_CalcCRC8(PECI_HostID<<1);
+ 428   2          }
+ 429   1      
+ 430   1          HOWRDR = Index;
+ 431   1          PECI_CalcCRC8(Index);
+ 432   1          HOWRDR = LSB;
+ 433   1          PECI_CalcCRC8(LSB);
+ 434   1          HOWRDR = MSB;
+ 435   1          PECI_CalcCRC8(MSB);
+ 436   1      
+ 437   1          for(cunt=0x00; cunt<(WriteLen-6); cunt++)
+ 438   1          {
+ 439   2              HOWRDR = *(WriteData+cunt);
+ 440   2              PECI_CalcCRC8(*(WriteData+cunt));
+ 441   2          }
+ 442   1      
+ 443   1          #if PECI_Softwave_AWFCS
+ 444   1          PECI_CRC8 ^= 0x80;          // Inverted MSb of preliminary FCS reslut
+ 445   1          HOWRDR = PECI_CRC8;
+ 446   1          #endif
+ 447   1               
+ 448   1          if(PECI_CheckHostBusy())
+ 449   1          {
+ 450   2              PECI_HostControl(START+FCSERR_ABT);
+ 451   2              if(PECI_CheckHostFinish())
+ 452   2              {
+ 453   3                  PECI_CompletionCode = HORDDR;
+ 454   3                  if(PECI_CompletionCode == PECI_CC_Valid)
+ 455   3                  {
+ 456   4                      done = 0x01;
+ 457   4                  }
+ 458   3                  else
+ 459   3                  {
+ 460   4                      done = 0x00;
+ 461   4                  }
+ 462   3              }
+ 463   2          }
+ 464   1      
+ 465   1          PECI_HostDisable();
+ 466   1          ResetPECIStatus();
+ 467   1          return(done);
+ 468   1      }
+ 469          
+ 470          //-----------------------------------------------------------------------
+ 471          // Read to Model Specific Registers function
+ 472          //  return : 
+ 473          //              1 : done
+ 474          //              0 : error
+ 475          //  Input : 
+ 476          //              (1) addr : The address of processor
+ 477          //              (2) *ReadData : the start address of variable to save data
+ 478          //              (3) Domain : 0 or 1¡C 
+ 479          //                           0 : Domain 0, 1 : Domain 1¡C
+ 480          //              (4) Retry   0 or 1
+ 481          //              (5) ProcessorID
+ 482          //              (6) LSB of parameter
+ 483          //              (7) MSB of parameter
+ 484          //              (8) ReadLen read length 0x02 or 0x03 or 0x05 or 0x09
+ 485          //-----------------------------------------------------------------------
+ 486          BYTE PECI_RdIAMSR(BYTE addr, XBYTE *ReadData, BYTE Domain, BYTE Retry, BYTE ProcessorID, BYTE LSB, BYTE MS
+             -B, BYTE ReadLen)
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 9   
+
+ 487          {
+ 488   1          BYTE done, cunt;
+ 489   1          done = 0x00;
+ 490   1          
+ 491   1          PECI_HostEnable();
+ 492   1          PECI_HostControl(FIFOCLR);
+ 493   1          HOTRADDR = addr;
+ 494   1          HOWRLR = 0x05;
+ 495   1          HORDLR = ReadLen;
+ 496   1          if(Domain<2)
+ 497   1          {
+ 498   2              HOCMDR = PECI_CMD_RdIAMSR+Domain;
+ 499   2          }
+ 500   1          else
+ 501   1          {
+ 502   2              HOCMDR = PECI_CMD_RdIAMSR;
+ 503   2          }
+ 504   1      
+ 505   1          if(Retry<2)
+ 506   1          {
+ 507   2              HOWRDR = (PECI_HostID<<1)+Retry;
+ 508   2          }
+ 509   1          else
+ 510   1          {
+ 511   2              HOWRDR = (PECI_HostID<<1);
+ 512   2          }
+ 513   1          
+ 514   1          HOWRDR = ProcessorID;
+ 515   1          HOWRDR = LSB;
+ 516   1          HOWRDR = MSB;
+ 517   1              
+ 518   1          if(PECI_CheckHostBusy())
+ 519   1          {
+ 520   2              //PECI_HostControl(START+FCSERR_ABT+FIFOCLR);
+ 521   2              PECI_HostControl(START+FCSERR_ABT);
+ 522   2              if(PECI_CheckHostFinish())
+ 523   2              {
+ 524   3                  for(cunt=0x00;cunt<HORDLR;cunt++)
+ 525   3                  {
+ 526   4                      if(cunt==0x00)
+ 527   4                      {
+ 528   5                          PECI_CompletionCode = HORDDR;
+ 529   5                      }
+ 530   4                      else
+ 531   4                      {
+ 532   5                          *(ReadData+cunt-1)=HORDDR;
+ 533   5                      }
+ 534   4                  }
+ 535   3      
+ 536   3                  if(PECI_CompletionCode == PECI_CC_Valid)
+ 537   3                  {
+ 538   4                      done = 0x01;
+ 539   4                  }
+ 540   3                  else
+ 541   3                  {
+ 542   4                      done = 0x00;
+ 543   4                  }
+ 544   3              }
+ 545   2          }
+ 546   1      
+ 547   1          PECI_HostDisable();
+ 548   1          ResetPECIStatus();
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 10  
+
+ 549   1          return(done);
+ 550   1      }
+ 551          
+ 552          //-----------------------------------------------------------------------
+ 553          // Write to Model Specific Registers function
+ 554          //  return : 
+ 555          //              1 : done
+ 556          //              0 : error
+ 557          //  Input : 
+ 558          //              (1) addr : The address of processor
+ 559          //              (2) *WriteData : the start address of variable to write data
+ 560          //              (3) Domain : 0 or 1¡C 
+ 561          //                           0 : Domain 0, 1 : Domain 1¡C
+ 562          //              (4) Retry   0 or 1
+ 563          //              (5) ProcessorID
+ 564          //              (6) LSB of parameter
+ 565          //              (7) MSB of parameter
+ 566          //              (8) WriteLen write length 0x07 or 0x08 or 0x0A or 0x0E
+ 567          //-----------------------------------------------------------------------
+ 568          BYTE PECI_WrIAMSR(BYTE addr, XBYTE *WriteData, BYTE Domain, BYTE Retry, BYTE ProcessorID, BYTE LSB, BYTE M
+             -SB, BYTE WriteLen)
+ 569          {
+ 570   1          BYTE done, cunt;
+ 571   1          done = 0x00;
+ 572   1      
+ 573   1          PECI_CompletionCode=0x00;
+ 574   1          PECI_HostEnable();
+ 575   1      
+ 576   1          #if PECI_Softwave_AWFCS
+ 577   1          PECI_HostControl(FIFOCLR);
+ 578   1          PECI_CRC8 = 0x00;
+ 579   1          #else
+                  PECI_HostControl(FIFOCLR+AWFCS_EN);
+                  #endif
+ 582   1          
+ 583   1          HOTRADDR = addr;
+ 584   1          PECI_CalcCRC8(addr);
+ 585   1          HOWRLR = WriteLen;
+ 586   1          PECI_CalcCRC8(WriteLen);
+ 587   1          HORDLR = 0x01;
+ 588   1          PECI_CalcCRC8(0x01);
+ 589   1          if(Domain<2)
+ 590   1          {
+ 591   2              HOCMDR = PECI_CMD_WrIAMSR+Domain;
+ 592   2              PECI_CalcCRC8(PECI_CMD_WrIAMSR+Domain);
+ 593   2          }
+ 594   1          else
+ 595   1          {
+ 596   2              HOCMDR = PECI_CMD_WrIAMSR;
+ 597   2              PECI_CalcCRC8(PECI_CMD_WrIAMSR);
+ 598   2          }
+ 599   1      
+ 600   1          if(Retry<2)
+ 601   1          {
+ 602   2              HOWRDR = (PECI_HostID<<1)+Retry;
+ 603   2              PECI_CalcCRC8((PECI_HostID<<1)+Retry);
+ 604   2          }
+ 605   1          else
+ 606   1          {
+ 607   2              HOWRDR = (PECI_HostID<<1);
+ 608   2              PECI_CalcCRC8(PECI_HostID<<1);
+ 609   2          }
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 11  
+
+ 610   1          
+ 611   1          HOWRDR = ProcessorID;
+ 612   1          PECI_CalcCRC8(ProcessorID);
+ 613   1          HOWRDR = LSB;
+ 614   1          PECI_CalcCRC8(LSB);
+ 615   1          HOWRDR = MSB;
+ 616   1          PECI_CalcCRC8(MSB);
+ 617   1      
+ 618   1          for(cunt=0x00; cunt<(WriteLen-6); cunt++)
+ 619   1          {
+ 620   2              HOWRDR = *(WriteData+cunt);
+ 621   2              PECI_CalcCRC8(*(WriteData+cunt));
+ 622   2          }
+ 623   1      
+ 624   1          #if PECI_Softwave_AWFCS
+ 625   1          PECI_CRC8 ^= 0x80;          // Inverted MSb of preliminary FCS reslut
+ 626   1          HOWRDR = PECI_CRC8;
+ 627   1          #endif
+ 628   1              
+ 629   1          if(PECI_CheckHostBusy())
+ 630   1          {
+ 631   2              PECI_HostControl(START+FCSERR_ABT);
+ 632   2              if(PECI_CheckHostFinish())
+ 633   2              {
+ 634   3                  PECI_CompletionCode = HORDDR;
+ 635   3                  if(PECI_CompletionCode == PECI_CC_Valid)
+ 636   3                  {
+ 637   4                      done = 0x01;
+ 638   4                  }
+ 639   3                  else
+ 640   3                  {
+ 641   4                      done = 0x00;
+ 642   4                  }
+ 643   3              }
+ 644   2          }
+ 645   1      
+ 646   1          PECI_HostDisable();
+ 647   1          ResetPECIStatus();
+ 648   1          return(done);
+ 649   1      }
+ 650          
+ 651          //-----------------------------------------------------------------------
+ 652          // Read access to the PCI configuration
+ 653          //  return : 
+ 654          //              1 : done
+ 655          //              0 : error
+ 656          //  Input : 
+ 657          //              (1) addr : The address of processor
+ 658          //              (2) *ReadData : the start address of variable to save data
+ 659          //              (3) Domain : 0 or 1¡C 
+ 660          //                           0 : Domain 0, 1 : Domain 1¡C
+ 661          //              (4) Retry   0 or 1
+ 662          //              (5) external pointer, point to LSB variable
+ 663          //              (6) ReadLen read length 0x02 or 0x03 or 0x05
+ 664          //-----------------------------------------------------------------------
+ 665          BYTE PECI_RdPCIConfig(BYTE addr, XBYTE *ReadData, BYTE Domain, BYTE Retry, XBYTE *pciaddr, BYTE ReadLen)
+ 666          {
+ 667   1          BYTE done, cunt;
+ 668   1          done = 0x00;
+ 669   1          
+ 670   1          PECI_HostEnable();
+ 671   1          PECI_HostControl(FIFOCLR);
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 12  
+
+ 672   1          HOTRADDR = addr;
+ 673   1          HOWRLR = 0x06;
+ 674   1          HORDLR = ReadLen;
+ 675   1          if(Domain<2)
+ 676   1          {
+ 677   2              HOCMDR = PECI_CMD_RdPCIConfig+Domain;
+ 678   2          }
+ 679   1          else
+ 680   1          {
+ 681   2              HOCMDR = PECI_CMD_RdPCIConfig;
+ 682   2          }
+ 683   1      
+ 684   1          if(Retry<2)
+ 685   1          {
+ 686   2              HOWRDR = (PECI_HostID<<1)+Retry;
+ 687   2          }
+ 688   1          else
+ 689   1          {
+ 690   2              HOWRDR = (PECI_HostID<<1);
+ 691   2          }
+ 692   1      
+ 693   1          for(cunt=0x00;cunt<4;cunt++)
+ 694   1          {
+ 695   2              HOWRDR = *(pciaddr+cunt);
+ 696   2          }
+ 697   1          
+ 698   1          if(PECI_CheckHostBusy())
+ 699   1          {
+ 700   2              //PECI_HostControl(START+FCSERR_ABT+FIFOCLR);
+ 701   2              PECI_HostControl(START+FCSERR_ABT);
+ 702   2              if(PECI_CheckHostFinish())
+ 703   2              {
+ 704   3                  for(cunt=0x00;cunt<HORDLR;cunt++)
+ 705   3                  {
+ 706   4                      *(ReadData+cunt)=HORDDR;
+ 707   4                  }
+ 708   3      
+ 709   3                  if(*ReadData == PECI_CC_Valid)
+ 710   3                  {
+ 711   4                      done = 0x01;
+ 712   4                  }
+ 713   3                  else
+ 714   3                  {
+ 715   4                      done = 0x00;
+ 716   4                  }
+ 717   3              }
+ 718   2          }
+ 719   1      
+ 720   1          PECI_HostDisable();
+ 721   1          ResetPECIStatus();
+ 722   1          return(done);
+ 723   1      }
+ 724          
+ 725          //-----------------------------------------------------------------------
+ 726          // Write access to the PCI configuration
+ 727          //  return : 
+ 728          //              1 : done
+ 729          //              0 : error
+ 730          //  Input : 
+ 731          //              (1) addr : The address of processor
+ 732          //              (2) *WriteData : the start address of variable to write data
+ 733          //              (3) Domain : 0 or 1¡C 
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 13  
+
+ 734          //                           0 : Domain 0, 1 : Domain 1¡C
+ 735          //              (4) Retry   0 or 1
+ 736          //              (5) Point to PCI configuration address (LSB)
+ 737          //              (6) WriteLen write length 0x08 or 0x09 or 0x0B
+ 738          //-----------------------------------------------------------------------
+ 739          BYTE PECI_WrPCIConfig(BYTE addr, XBYTE *WriteData, BYTE Domain, BYTE Retry, XBYTE *PCIAddr, BYTE WriteLen)
+ 740          {
+ 741   1          BYTE done, cunt;
+ 742   1          done = 0x00;
+ 743   1      
+ 744   1          PECI_CompletionCode=0x00;
+ 745   1          PECI_HostEnable();
+ 746   1      
+ 747   1          #if PECI_Softwave_AWFCS
+ 748   1          PECI_HostControl(FIFOCLR);
+ 749   1          PECI_CRC8 = 0x00;
+ 750   1          #else
+                  PECI_HostControl(FIFOCLR+AWFCS_EN);
+                  #endif
+ 753   1          
+ 754   1          HOTRADDR = addr;
+ 755   1          PECI_CalcCRC8(addr);
+ 756   1          HOWRLR = WriteLen;
+ 757   1          PECI_CalcCRC8(WriteLen);
+ 758   1          HORDLR = 0x01;
+ 759   1          PECI_CalcCRC8(0x01);
+ 760   1          if(Domain<2)
+ 761   1          {
+ 762   2              HOCMDR = PECI_CMD_WrPCIConfig+Domain;
+ 763   2              PECI_CalcCRC8(PECI_CMD_WrPCIConfig+Domain);
+ 764   2          }
+ 765   1          else
+ 766   1          {
+ 767   2              HOCMDR = PECI_CMD_WrPCIConfig;
+ 768   2              PECI_CalcCRC8(PECI_CMD_WrPCIConfig);
+ 769   2          }
+ 770   1      
+ 771   1          if(Retry<2)
+ 772   1          {
+ 773   2              HOWRDR = (PECI_HostID<<1)+Retry;
+ 774   2              PECI_CalcCRC8((PECI_HostID<<1)+Retry);
+ 775   2          }
+ 776   1          else
+ 777   1          {
+ 778   2              HOWRDR = (PECI_HostID<<1);
+ 779   2              PECI_CalcCRC8(PECI_HostID<<1);
+ 780   2          }
+ 781   1          
+ 782   1          for(cunt=0x00; cunt<4; cunt++)
+ 783   1          {
+ 784   2              HOWRDR = *(PCIAddr+cunt);
+ 785   2              PECI_CalcCRC8(*(PCIAddr+cunt));
+ 786   2          }
+ 787   1      
+ 788   1          for(cunt=0x00; cunt<(WriteLen-7); cunt++)
+ 789   1          {
+ 790   2              HOWRDR = *(WriteData+cunt);
+ 791   2              PECI_CalcCRC8(*(WriteData+cunt));
+ 792   2          }
+ 793   1      
+ 794   1          #if PECI_Softwave_AWFCS
+ 795   1          PECI_CRC8 ^= 0x80;          // Inverted MSb of preliminary FCS reslut
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 14  
+
+ 796   1          HOWRDR = PECI_CRC8;
+ 797   1          #endif
+ 798   1              
+ 799   1          if(PECI_CheckHostBusy())
+ 800   1          {
+ 801   2              PECI_HostControl(START+FCSERR_ABT);
+ 802   2              if(PECI_CheckHostFinish())
+ 803   2              {
+ 804   3                  PECI_CompletionCode = HORDDR;
+ 805   3                  if(PECI_CompletionCode == PECI_CC_Valid)
+ 806   3                  {
+ 807   4                      done = 0x01;
+ 808   4                  }
+ 809   3                  else
+ 810   3                  {
+ 811   4                      done = 0x00;
+ 812   4                  }
+ 813   3              }
+ 814   2          }
+ 815   1      
+ 816   1          PECI_HostDisable();
+ 817   1          ResetPECIStatus();
+ 818   1          return(done);
+ 819   1      }
+ 820          
+ 821          //-----------------------------------------------------------------------
+ 822          // Read access to the PCI configuration space within the processor
+ 823          //  return : 
+ 824          //              1 : done
+ 825          //              0 : error
+ 826          //  Input : 
+ 827          //              (1) addr : The address of processor
+ 828          //              (2) *ReadData : the start address of variable to save data
+ 829          //              (3) Domain : 0 or 1¡C 
+ 830          //                           0 : Domain 0, 1 : Domain 1¡C
+ 831          //              (4) Retry   0 or 1
+ 832          //              (5) external pointer, point to LSB variable
+ 833          //              (6) ReadLen read length 0x02 or 0x03 or 0x05
+ 834          //-----------------------------------------------------------------------
+ 835          BYTE PECI_RdPCIConfigLocal(BYTE addr, XBYTE *ReadData, BYTE Domain, BYTE Retry, XBYTE *pciaddr, BYTE ReadL
+             -en)
+ 836          {
+ 837   1          BYTE done, cunt;
+ 838   1          done = 0x00;
+ 839   1          
+ 840   1          PECI_HostEnable();
+ 841   1          PECI_HostControl(FIFOCLR);
+ 842   1          HOTRADDR = addr;
+ 843   1          HOWRLR = 0x05;
+ 844   1          HORDLR = ReadLen;
+ 845   1          if(Domain<2)
+ 846   1          {
+ 847   2              HOCMDR = PECI_CMD_RdPCIConfigLocal+Domain;
+ 848   2          }
+ 849   1          else
+ 850   1          {
+ 851   2              HOCMDR = PECI_CMD_RdPCIConfigLocal;
+ 852   2          }
+ 853   1      
+ 854   1          if(Retry<2)
+ 855   1          {
+ 856   2              HOWRDR = (PECI_HostID<<1)+Retry;
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 15  
+
+ 857   2          }
+ 858   1          else
+ 859   1          {
+ 860   2              HOWRDR = (PECI_HostID<<1);
+ 861   2          }
+ 862   1      
+ 863   1          for(cunt=0x00;cunt<3;cunt++)
+ 864   1          {
+ 865   2              HOWRDR = *(pciaddr+cunt);
+ 866   2          }
+ 867   1          
+ 868   1          if(PECI_CheckHostBusy())
+ 869   1          {
+ 870   2              //PECI_HostControl(START+FCSERR_ABT+FIFOCLR);
+ 871   2              PECI_HostControl(START+FCSERR_ABT);
+ 872   2              if(PECI_CheckHostFinish())
+ 873   2              {
+ 874   3                  for(cunt=0x00;cunt<HORDLR;cunt++)
+ 875   3                  {
+ 876   4                      *(ReadData+cunt)=HORDDR;
+ 877   4                  }
+ 878   3      
+ 879   3                  if(*ReadData == PECI_CC_Valid)
+ 880   3                  {
+ 881   4                      done = 0x01;
+ 882   4                  }
+ 883   3                  else
+ 884   3                  {
+ 885   4                      done = 0x00;
+ 886   4                  }
+ 887   3              }
+ 888   2          }
+ 889   1      
+ 890   1          PECI_HostDisable();
+ 891   1          ResetPECIStatus();
+ 892   1          return(done);
+ 893   1      }
+ 894          
+ 895          //-----------------------------------------------------------------------
+ 896          // Write access to the PCI configuration space within the processor
+ 897          //  return : 
+ 898          //              1 : done
+ 899          //              0 : error
+ 900          //  Input : 
+ 901          //              (1) addr : The address of processor
+ 902          //              (2) *WriteData : the start address of variable to write data
+ 903          //              (3) Domain : 0 or 1¡C 
+ 904          //                           0 : Domain 0, 1 : Domain 1¡C
+ 905          //              (4) Retry   0 or 1
+ 906          //              (5) Point to PCI configuration address (LSB)
+ 907          //              (6) WriteLen write length 0x07 or 0x08 or 0x0A
+ 908          //-----------------------------------------------------------------------
+ 909          BYTE PECI_WrPCIConfigLocal(BYTE addr, XBYTE *WriteData, BYTE Domain, BYTE Retry, XBYTE *PCIAddr, BYTE Writ
+             -eLen)
+ 910          {
+ 911   1          BYTE done, cunt;
+ 912   1          done = 0x00;
+ 913   1      
+ 914   1          PECI_CompletionCode=0x00;
+ 915   1          PECI_HostEnable();
+ 916   1      
+ 917   1          #if PECI_Softwave_AWFCS
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 16  
+
+ 918   1          PECI_HostControl(FIFOCLR);
+ 919   1          PECI_CRC8 = 0x00;
+ 920   1          #else
+                  PECI_HostControl(FIFOCLR+AWFCS_EN);
+                  #endif
+ 923   1          
+ 924   1          HOTRADDR = addr;
+ 925   1          PECI_CalcCRC8(addr);
+ 926   1          HOWRLR = WriteLen;
+ 927   1          PECI_CalcCRC8(WriteLen);
+ 928   1          HORDLR = 0x01;
+ 929   1          PECI_CalcCRC8(0x01);
+ 930   1          if(Domain<2)
+ 931   1          {
+ 932   2              HOCMDR = PECI_CMD_WrPCIConfigLocal+Domain;
+ 933   2              PECI_CalcCRC8(PECI_CMD_WrPCIConfigLocal+Domain);
+ 934   2          }
+ 935   1          else
+ 936   1          {
+ 937   2              HOCMDR = PECI_CMD_WrPCIConfigLocal;
+ 938   2              PECI_CalcCRC8(PECI_CMD_WrPCIConfigLocal);
+ 939   2          }
+ 940   1      
+ 941   1          if(Retry<2)
+ 942   1          {
+ 943   2              HOWRDR = (PECI_HostID<<1)+Retry;
+ 944   2              PECI_CalcCRC8((PECI_HostID<<1)+Retry);
+ 945   2          }
+ 946   1          else
+ 947   1          {
+ 948   2              HOWRDR = (PECI_HostID<<1);
+ 949   2              PECI_CalcCRC8(PECI_HostID<<1);
+ 950   2          }
+ 951   1          
+ 952   1          for(cunt=0x00; cunt<3; cunt++)
+ 953   1          {
+ 954   2              HOWRDR = *(PCIAddr+cunt);
+ 955   2              PECI_CalcCRC8(*(PCIAddr+cunt));
+ 956   2          }
+ 957   1      
+ 958   1          for(cunt=0x00; cunt<(WriteLen-6); cunt++)
+ 959   1          {
+ 960   2              HOWRDR = *(WriteData+cunt);
+ 961   2              PECI_CalcCRC8(*(WriteData+cunt));
+ 962   2          }
+ 963   1      
+ 964   1          #if PECI_Softwave_AWFCS
+ 965   1          PECI_CRC8 ^= 0x80;          // Inverted MSb of preliminary FCS reslut
+ 966   1          HOWRDR = PECI_CRC8;
+ 967   1          #endif
+ 968   1              
+ 969   1          if(PECI_CheckHostBusy())
+ 970   1          {
+ 971   2              PECI_HostControl(START+FCSERR_ABT);
+ 972   2              if(PECI_CheckHostFinish())
+ 973   2              {
+ 974   3                  PECI_CompletionCode = HORDDR;
+ 975   3                  if(PECI_CompletionCode == PECI_CC_Valid)
+ 976   3                  {
+ 977   4                      done = 0x01;
+ 978   4                  }
+ 979   3                  else
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 17  
+
+ 980   3                  {
+ 981   4                      done = 0x00;
+ 982   4                  }
+ 983   3              }
+ 984   2          }
+ 985   1      
+ 986   1          PECI_HostDisable();
+ 987   1          ResetPECIStatus();
+ 988   1          return(done);
+ 989   1      }
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 18  
+
+ASSEMBLY LISTING OF GENERATED OBJECT CODE
+
+
+             ; FUNCTION Init_PECI (BEGIN)
+                                           ; SOURCE LINE # 17
+                                           ; SOURCE LINE # 18
+                                           ; SOURCE LINE # 19
+0000 90163E            MOV     DPTR,#0163EH
+0003 E4                CLR     A
+0004 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 20
+0005 9016F1            MOV     DPTR,#016F1H
+0008 E0                MOVX    A,@DPTR
+0009 4410              ORL     A,#010H
+000B F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 21
+000C 22                RET     
+             ; FUNCTION Init_PECI (END)
+
+             ; FUNCTION PECI_InitTimeOutTimer (BEGIN)
+                                           ; SOURCE LINE # 26
+                                           ; SOURCE LINE # 27
+                                           ; SOURCE LINE # 28
+0000 C2AB              CLR     ET1
+                                           ; SOURCE LINE # 29
+0002 758DA5            MOV     TH1,#0A5H
+                                           ; SOURCE LINE # 30
+0005 758BDB            MOV     TL1,#0DBH
+                                           ; SOURCE LINE # 31
+0008 D28E              SETB    TR1
+                                           ; SOURCE LINE # 32
+000A C28F              CLR     TF1
+                                           ; SOURCE LINE # 33
+000C 22                RET     
+             ; FUNCTION PECI_InitTimeOutTimer (END)
+
+             ; FUNCTION L?0159 (BEGIN)
+0000         L?0160:
+0000 E0                MOVX    A,@DPTR
+0001 FE                MOV     R6,A
+0002 A3                INC     DPTR
+0003 E0                MOVX    A,@DPTR
+0004 FF                MOV     R7,A
+0005 2B                ADD     A,R3
+0006 F582              MOV     DPL,A
+0008 E4                CLR     A
+0009 3E                ADDC    A,R6
+000A F583              MOV     DPH,A
+000C E0                MOVX    A,@DPTR
+000D 903006            MOV     DPTR,#03006H
+0010 F0                MOVX    @DPTR,A
+0011 EF                MOV     A,R7
+0012 2B                ADD     A,R3
+0013 F582              MOV     DPL,A
+0015 E4                CLR     A
+0016 3E                ADDC    A,R6
+0017 F583              MOV     DPH,A
+0019 E0                MOVX    A,@DPTR
+001A FF                MOV     R7,A
+             ; FUNCTION _PECI_CalcCRC8 (BEGIN)
+                                           ; SOURCE LINE # 38
+;---- Variable 'sourcebyte' assigned to Register 'R7' ----
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 19  
+
+                                           ; SOURCE LINE # 39
+                                           ; SOURCE LINE # 42
+001B 900000      E     MOV     DPTR,#PECI_CRC8
+001E E0                MOVX    A,@DPTR
+001F 6F                XRL     A,R7
+0020 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 43
+0021 E0                MOVX    A,@DPTR
+;---- Variable 'temp' assigned to Register 'R5' ----
+0022 FD                MOV     R5,A
+                                           ; SOURCE LINE # 45
+0023 20E70A            JB      ACC.7,?C0003
+                                           ; SOURCE LINE # 46
+                                           ; SOURCE LINE # 47
+0026 25E0              ADD     A,ACC
+0028 FD                MOV     R5,A
+                                           ; SOURCE LINE # 48
+0029 E0                MOVX    A,@DPTR
+002A AF05              MOV     R7,AR5
+002C 6D                XRL     A,R5
+002D F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 49
+002E 800E              SJMP    ?C0004
+0030         ?C0003:
+                                           ; SOURCE LINE # 51
+                                           ; SOURCE LINE # 52
+0030 ED                MOV     A,R5
+0031 25E0              ADD     A,ACC
+0033 FD                MOV     R5,A
+                                           ; SOURCE LINE # 53
+0034 900000      E     MOV     DPTR,#PECI_CRC8
+0037 E0                MOVX    A,@DPTR
+0038 6409              XRL     A,#09H
+003A F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 54
+003B E0                MOVX    A,@DPTR
+003C 6D                XRL     A,R5
+003D F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 55
+003E         ?C0004:
+                                           ; SOURCE LINE # 57
+003E ED                MOV     A,R5
+003F 20E70A            JB      ACC.7,?C0005
+                                           ; SOURCE LINE # 58
+                                           ; SOURCE LINE # 59
+0042 25E0              ADD     A,ACC
+0044 FD                MOV     R5,A
+                                           ; SOURCE LINE # 60
+0045 900000      E     MOV     DPTR,#PECI_CRC8
+0048 E0                MOVX    A,@DPTR
+0049 6D                XRL     A,R5
+004A F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 61
+004B 22                RET     
+004C         ?C0005:
+                                           ; SOURCE LINE # 63
+                                           ; SOURCE LINE # 64
+004C ED                MOV     A,R5
+004D 25E0              ADD     A,ACC
+004F FD                MOV     R5,A
+                                           ; SOURCE LINE # 65
+0050 900000      E     MOV     DPTR,#PECI_CRC8
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 20  
+
+0053 E0                MOVX    A,@DPTR
+0054 6407              XRL     A,#07H
+0056 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 66
+0057 E0                MOVX    A,@DPTR
+0058 AE05              MOV     R6,AR5
+005A 6E                XRL     A,R6
+005B F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 67
+                                           ; SOURCE LINE # 69
+005C         ?C0007:
+005C 22                RET     
+             ; FUNCTION _PECI_CalcCRC8 (END)
+
+             ; FUNCTION PECI_HostEnable (BEGIN)
+                                           ; SOURCE LINE # 74
+                                           ; SOURCE LINE # 75
+                                           ; SOURCE LINE # 76
+0000 903001            MOV     DPTR,#03001H
+0003 E0                MOVX    A,@DPTR
+0004 4408              ORL     A,#08H
+0006 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 77
+0007 22                RET     
+             ; FUNCTION PECI_HostEnable (END)
+
+             ; FUNCTION PECI_HostDisable (BEGIN)
+                                           ; SOURCE LINE # 82
+                                           ; SOURCE LINE # 83
+                                           ; SOURCE LINE # 84
+0000 903001            MOV     DPTR,#03001H
+0003 E4                CLR     A
+0004 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 85
+0005 22                RET     
+             ; FUNCTION PECI_HostDisable (END)
+
+             ; FUNCTION L?0161 (BEGIN)
+0000         L?0162:
+0000 EC                MOV     A,R4
+0001 F0                MOVX    @DPTR,A
+0002 A3                INC     DPTR
+0003 ED                MOV     A,R5
+0004 F0                MOVX    @DPTR,A
+0005 AE07              MOV     R6,AR7
+0007 E4                CLR     A
+0008 FC                MOV     R4,A
+0009 900000      E     MOV     DPTR,#PECI_CompletionCode
+000C F0                MOVX    @DPTR,A
+000D         L?0163:
+000D 120000      R     LCALL   PECI_HostEnable
+0010 7F20              MOV     R7,#020H
+             ; FUNCTION _PECI_HostControl (BEGIN)
+                                           ; SOURCE LINE # 90
+;---- Variable 'control' assigned to Register 'R7' ----
+                                           ; SOURCE LINE # 91
+                                           ; SOURCE LINE # 92
+0012 903001            MOV     DPTR,#03001H
+0015 E0                MOVX    A,@DPTR
+0016 4F                ORL     A,R7
+0017 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 93
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 21  
+
+0018 22                RET     
+             ; FUNCTION _PECI_HostControl (END)
+
+             ; FUNCTION L?0166 (BEGIN)
+0000         L?0167:
+0000 900000      E     MOV     DPTR,#PECI_CRC8
+0003 E0                MOVX    A,@DPTR
+0004 6480              XRL     A,#080H
+0006 F0                MOVX    @DPTR,A
+0007 E0                MOVX    A,@DPTR
+0008         L?0168:
+0008 903006            MOV     DPTR,#03006H
+000B F0                MOVX    @DPTR,A
+             ; FUNCTION PECI_CheckHostBusy (BEGIN)
+                                           ; SOURCE LINE # 101
+                                           ; SOURCE LINE # 102
+                                           ; SOURCE LINE # 103
+000C 120000      R     LCALL   PECI_InitTimeOutTimer
+000F         ?C0011:
+                                           ; SOURCE LINE # 105
+000F 208F0B            JB      TF1,?C0012
+                                           ; SOURCE LINE # 106
+                                           ; SOURCE LINE # 107
+0012 903000            MOV     DPTR,#03000H
+0015 E0                MOVX    A,@DPTR
+0016 20E0F6            JB      ACC.0,?C0011
+                                           ; SOURCE LINE # 108
+                                           ; SOURCE LINE # 109
+0019 C28E              CLR     TR1
+                                           ; SOURCE LINE # 110
+001B C28F              CLR     TF1
+                                           ; SOURCE LINE # 111
+                                           ; SOURCE LINE # 112
+                                           ; SOURCE LINE # 113
+001D         ?C0012:
+                                           ; SOURCE LINE # 115
+001D 308F07            JNB     TF1,?C0014
+                                           ; SOURCE LINE # 116
+                                           ; SOURCE LINE # 117
+0020 C28E              CLR     TR1
+                                           ; SOURCE LINE # 118
+0022 C28F              CLR     TF1
+                                           ; SOURCE LINE # 119
+0024 7F00              MOV     R7,#00H
+0026 22                RET     
+                                           ; SOURCE LINE # 120
+0027         ?C0014:
+                                           ; SOURCE LINE # 121
+0027 7F01              MOV     R7,#01H
+                                           ; SOURCE LINE # 122
+0029         ?C0015:
+0029 22                RET     
+             ; FUNCTION PECI_CheckHostBusy (END)
+
+             ; FUNCTION L?0164 (BEGIN)
+0000         L?0165:
+0000 7F11              MOV     R7,#011H
+0002 120000      R     LCALL   _PECI_HostControl
+             ; FUNCTION PECI_CheckHostFinish (BEGIN)
+                                           ; SOURCE LINE # 130
+;---- Variable 'status' assigned to Register 'R6' ----
+                                           ; SOURCE LINE # 131
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 22  
+
+                                           ; SOURCE LINE # 134
+;---- Variable 'error' assigned to Register 'R7' ----
+0005 E4                CLR     A
+0006 FF                MOV     R7,A
+                                           ; SOURCE LINE # 136
+0007 120000      R     LCALL   PECI_InitTimeOutTimer
+000A         ?C0016:
+                                           ; SOURCE LINE # 137
+000A 208F16            JB      TF1,?C0017
+                                           ; SOURCE LINE # 138
+                                           ; SOURCE LINE # 139
+000D 903000            MOV     DPTR,#03000H
+0010 E0                MOVX    A,@DPTR
+0011 FE                MOV     R6,A
+                                           ; SOURCE LINE # 140
+0012 30E106            JNB     ACC.1,?C0018
+                                           ; SOURCE LINE # 141
+                                           ; SOURCE LINE # 142
+0015 C28E              CLR     TR1
+                                           ; SOURCE LINE # 143
+0017 C28F              CLR     TF1
+                                           ; SOURCE LINE # 144
+0019 8008              SJMP    ?C0017
+                                           ; SOURCE LINE # 145
+001B         ?C0018:
+                                           ; SOURCE LINE # 146
+001B EE                MOV     A,R6
+001C 546C              ANL     A,#06CH
+001E FE                MOV     R6,A
+001F 60E9              JZ      ?C0016
+                                           ; SOURCE LINE # 147
+                                           ; SOURCE LINE # 148
+0021 7F01              MOV     R7,#01H
+                                           ; SOURCE LINE # 149
+                                           ; SOURCE LINE # 150
+                                           ; SOURCE LINE # 151
+0023         ?C0017:
+                                           ; SOURCE LINE # 152
+0023 208F04            JB      TF1,?C0022
+0026 EF                MOV     A,R7
+0027 B40107            CJNE    A,#01H,?C0021
+002A         ?C0022:
+                                           ; SOURCE LINE # 153
+                                           ; SOURCE LINE # 154
+002A C28F              CLR     TF1
+                                           ; SOURCE LINE # 155
+002C C28E              CLR     TR1
+                                           ; SOURCE LINE # 156
+002E 7F00              MOV     R7,#00H
+0030 22                RET     
+                                           ; SOURCE LINE # 157
+0031         ?C0021:
+                                           ; SOURCE LINE # 158
+0031 7F01              MOV     R7,#01H
+                                           ; SOURCE LINE # 159
+0033         ?C0023:
+0033 22                RET     
+             ; FUNCTION PECI_CheckHostFinish (END)
+
+             ; FUNCTION L?0169 (BEGIN)
+0000 120000      R     LCALL   PECI_HostDisable
+             ; FUNCTION ResetPECIStatus (BEGIN)
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 23  
+
+                                           ; SOURCE LINE # 164
+                                           ; SOURCE LINE # 165
+                                           ; SOURCE LINE # 166
+0003 903000            MOV     DPTR,#03000H
+0006 74FE              MOV     A,#0FEH
+0008 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 167
+0009 22                RET     
+             ; FUNCTION ResetPECIStatus (END)
+
+             ; FUNCTION _PECI_Ping (BEGIN)
+                                           ; SOURCE LINE # 177
+;---- Variable 'addr' assigned to Register 'R7' ----
+                                           ; SOURCE LINE # 178
+                                           ; SOURCE LINE # 180
+;---- Variable 'done' assigned to Register 'R5' ----
+0000 E4                CLR     A
+0001 FD                MOV     R5,A
+                                           ; SOURCE LINE # 182
+0002 120000      R     LCALL   PECI_HostEnable
+                                           ; SOURCE LINE # 183
+0005 903003            MOV     DPTR,#03003H
+0008 EF                MOV     A,R7
+0009 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 184
+000A A3                INC     DPTR
+000B E4                CLR     A
+000C F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 185
+000D A3                INC     DPTR
+000E F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 187
+000F 120000      R     LCALL   PECI_CheckHostBusy
+0012 EF                MOV     A,R7
+0013 6007              JZ      ?C0025
+                                           ; SOURCE LINE # 188
+                                           ; SOURCE LINE # 189
+                                           ; SOURCE LINE # 190
+0015 120000      R     LCALL   L?0164
+0018 EF                MOV     A,R7
+0019 6001              JZ      ?C0025
+                                           ; SOURCE LINE # 191
+                                           ; SOURCE LINE # 192
+001B 0D                INC     R5
+                                           ; SOURCE LINE # 193
+                                           ; SOURCE LINE # 194
+001C         ?C0025:
+                                           ; SOURCE LINE # 196
+                                           ; SOURCE LINE # 197
+001C 120000      R     LCALL   L?0169
+                                           ; SOURCE LINE # 198
+001F AF05              MOV     R7,AR5
+                                           ; SOURCE LINE # 199
+0021         ?C0027:
+0021 22                RET     
+             ; FUNCTION _PECI_Ping (END)
+
+             ; FUNCTION _PECI_GetDIB (BEGIN)
+                                           ; SOURCE LINE # 210
+;---- Variable 'ReadData' assigned to Register 'R4/R5' ----
+;---- Variable 'addr' assigned to Register 'R6' ----
+0000 AE07              MOV     R6,AR7
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 24  
+
+                                           ; SOURCE LINE # 211
+                                           ; SOURCE LINE # 213
+;---- Variable 'done' assigned to Register 'R3' ----
+0002 E4                CLR     A
+0003 FB                MOV     R3,A
+                                           ; SOURCE LINE # 215
+                                           ; SOURCE LINE # 216
+0004 120000      R     LCALL   L?0163
+                                           ; SOURCE LINE # 217
+0007 903003            MOV     DPTR,#03003H
+000A EE                MOV     A,R6
+000B F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 218
+000C A3                INC     DPTR
+000D 7401              MOV     A,#01H
+000F F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 219
+0010 A3                INC     DPTR
+0011 7408              MOV     A,#08H
+0013 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 220
+0014 903002            MOV     DPTR,#03002H
+0017 74F7              MOV     A,#0F7H
+0019 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 222
+001A 120000      R     LCALL   PECI_CheckHostBusy
+001D EF                MOV     A,R7
+001E 6026              JZ      ?C0028
+                                           ; SOURCE LINE # 223
+                                           ; SOURCE LINE # 225
+                                           ; SOURCE LINE # 226
+0020 120000      R     LCALL   L?0164
+0023 EF                MOV     A,R7
+0024 6020              JZ      ?C0028
+                                           ; SOURCE LINE # 227
+                                           ; SOURCE LINE # 228
+;---- Variable 'index' assigned to Register 'R7' ----
+0026 E4                CLR     A
+0027 FF                MOV     R7,A
+0028         ?C0030:
+0028 903005            MOV     DPTR,#03005H
+002B E0                MOVX    A,@DPTR
+002C FE                MOV     R6,A
+002D EF                MOV     A,R7
+002E C3                CLR     C
+002F 9E                SUBB    A,R6
+0030 5012              JNC     ?C0031
+                                           ; SOURCE LINE # 229
+                                           ; SOURCE LINE # 230
+0032 903007            MOV     DPTR,#03007H
+0035 E0                MOVX    A,@DPTR
+0036 FE                MOV     R6,A
+0037 ED                MOV     A,R5
+0038 2F                ADD     A,R7
+0039 F582              MOV     DPL,A
+003B E4                CLR     A
+003C 3C                ADDC    A,R4
+003D F583              MOV     DPH,A
+003F EE                MOV     A,R6
+0040 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 231
+0041 0F                INC     R7
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 25  
+
+0042 80E4              SJMP    ?C0030
+0044         ?C0031:
+                                           ; SOURCE LINE # 232
+0044 7B01              MOV     R3,#01H
+                                           ; SOURCE LINE # 233
+                                           ; SOURCE LINE # 234
+0046         ?C0028:
+                                           ; SOURCE LINE # 236
+                                           ; SOURCE LINE # 237
+0046 120000      R     LCALL   L?0169
+                                           ; SOURCE LINE # 238
+0049 AF03              MOV     R7,AR3
+                                           ; SOURCE LINE # 239
+004B         ?C0033:
+004B 22                RET     
+             ; FUNCTION _PECI_GetDIB (END)
+
+             ; FUNCTION _PECI_GetTemp (BEGIN)
+                                           ; SOURCE LINE # 252
+0000 900000      R     MOV     DPTR,#ReadData
+0003 EC                MOV     A,R4
+0004 F0                MOVX    @DPTR,A
+0005 A3                INC     DPTR
+0006 ED                MOV     A,R5
+0007 F0                MOVX    @DPTR,A
+;---- Variable 'addr' assigned to Register 'R6' ----
+0008 AE07              MOV     R6,AR7
+;---- Variable 'Domain' assigned to Register 'R3' ----
+                                           ; SOURCE LINE # 253
+                                           ; SOURCE LINE # 255
+;---- Variable 'done' assigned to Register 'R5' ----
+000A E4                CLR     A
+000B FD                MOV     R5,A
+                                           ; SOURCE LINE # 257
+                                           ; SOURCE LINE # 258
+000C 120000      R     LCALL   L?0163
+                                           ; SOURCE LINE # 259
+000F 903003            MOV     DPTR,#03003H
+0012 EE                MOV     A,R6
+0013 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 260
+0014 A3                INC     DPTR
+0015 7401              MOV     A,#01H
+0017 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 261
+0018 A3                INC     DPTR
+0019 04                INC     A
+001A F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 262
+001B EB                MOV     A,R3
+001C C3                CLR     C
+001D 9402              SUBB    A,#02H
+001F 5008              JNC     ?C0034
+                                           ; SOURCE LINE # 263
+                                           ; SOURCE LINE # 264
+0021 EB                MOV     A,R3
+0022 04                INC     A
+0023 903002            MOV     DPTR,#03002H
+0026 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 265
+0027 8006              SJMP    ?C0035
+0029         ?C0034:
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 26  
+
+                                           ; SOURCE LINE # 267
+                                           ; SOURCE LINE # 268
+0029 903002            MOV     DPTR,#03002H
+002C 7401              MOV     A,#01H
+002E F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 269
+002F         ?C0035:
+                                           ; SOURCE LINE # 271
+002F 120000      R     LCALL   PECI_CheckHostBusy
+0032 EF                MOV     A,R7
+0033 6030              JZ      ?C0036
+                                           ; SOURCE LINE # 272
+                                           ; SOURCE LINE # 274
+                                           ; SOURCE LINE # 275
+0035 120000      R     LCALL   L?0165
+0038 EF                MOV     A,R7
+0039 602A              JZ      ?C0036
+                                           ; SOURCE LINE # 276
+                                           ; SOURCE LINE # 277
+003B 903007            MOV     DPTR,#03007H
+003E E0                MOVX    A,@DPTR
+003F FF                MOV     R7,A
+0040 900000      R     MOV     DPTR,#ReadData
+0043 E0                MOVX    A,@DPTR
+0044 FC                MOV     R4,A
+0045 A3                INC     DPTR
+0046 E0                MOVX    A,@DPTR
+0047 F582              MOV     DPL,A
+0049 8C83              MOV     DPH,R4
+004B EF                MOV     A,R7
+004C F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 278
+004D 903007            MOV     DPTR,#03007H
+0050 E0                MOVX    A,@DPTR
+0051 FF                MOV     R7,A
+0052 900000      R     MOV     DPTR,#ReadData
+0055 E4                CLR     A
+0056 75F001            MOV     B,#01H
+0059 120000      E     LCALL   ?C?IILDX
+005C 85F082            MOV     DPL,B
+005F F583              MOV     DPH,A
+0061 EF                MOV     A,R7
+0062 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 279
+0063 7D01              MOV     R5,#01H
+                                           ; SOURCE LINE # 280
+                                           ; SOURCE LINE # 281
+0065         ?C0036:
+                                           ; SOURCE LINE # 283
+0065 120000      R     LCALL   PECI_HostDisable
+                                           ; SOURCE LINE # 284
+0068 120000      R     LCALL   ResetPECIStatus
+                                           ; SOURCE LINE # 285
+006B AF05              MOV     R7,AR5
+                                           ; SOURCE LINE # 286
+006D         ?C0038:
+006D 22                RET     
+             ; FUNCTION _PECI_GetTemp (END)
+
+             ; FUNCTION _PECI_RdPkgConfig (BEGIN)
+                                           ; SOURCE LINE # 304
+;---- Variable 'addr' assigned to Register 'R6' ----
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 27  
+
+0000 AE07              MOV     R6,AR7
+;---- Variable 'Domain' assigned to Register 'R3' ----
+;---- Variable 'ReadData' assigned to Register 'R4/R5' ----
+                                           ; SOURCE LINE # 305
+                                           ; SOURCE LINE # 307
+;---- Variable 'done' assigned to Register 'R2' ----
+0002 E4                CLR     A
+0003 FA                MOV     R2,A
+                                           ; SOURCE LINE # 309
+                                           ; SOURCE LINE # 310
+0004 120000      R     LCALL   L?0163
+                                           ; SOURCE LINE # 311
+0007 903003            MOV     DPTR,#03003H
+000A EE                MOV     A,R6
+000B F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 312
+000C A3                INC     DPTR
+000D 7405              MOV     A,#05H
+000F F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 313
+0010 900000      R     MOV     DPTR,#ReadLen
+0013 E0                MOVX    A,@DPTR
+0014 903005            MOV     DPTR,#03005H
+0017 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 314
+0018 EB                MOV     A,R3
+0019 C3                CLR     C
+001A 9402              SUBB    A,#02H
+001C 5009              JNC     ?C0039
+                                           ; SOURCE LINE # 315
+                                           ; SOURCE LINE # 316
+001E EB                MOV     A,R3
+001F 24A1              ADD     A,#0A1H
+0021 903002            MOV     DPTR,#03002H
+0024 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 317
+0025 8006              SJMP    ?C0040
+0027         ?C0039:
+                                           ; SOURCE LINE # 319
+                                           ; SOURCE LINE # 320
+0027 903002            MOV     DPTR,#03002H
+002A 74A1              MOV     A,#0A1H
+002C F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 321
+002D         ?C0040:
+                                           ; SOURCE LINE # 323
+002D 900000      R     MOV     DPTR,#Retry
+0030 E0                MOVX    A,@DPTR
+0031 FF                MOV     R7,A
+0032 C3                CLR     C
+0033 9402              SUBB    A,#02H
+0035 5009              JNC     ?C0041
+                                           ; SOURCE LINE # 324
+                                           ; SOURCE LINE # 325
+0037 EF                MOV     A,R7
+0038 2402              ADD     A,#02H
+003A 903006            MOV     DPTR,#03006H
+003D F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 326
+003E 8006              SJMP    ?C0042
+0040         ?C0041:
+                                           ; SOURCE LINE # 328
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 28  
+
+                                           ; SOURCE LINE # 329
+0040 903006            MOV     DPTR,#03006H
+0043 7402              MOV     A,#02H
+0045 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 330
+0046         ?C0042:
+                                           ; SOURCE LINE # 332
+0046 900000      R     MOV     DPTR,#Index
+0049 E0                MOVX    A,@DPTR
+004A 903006            MOV     DPTR,#03006H
+004D F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 333
+004E 900000      R     MOV     DPTR,#LSB
+0051 E0                MOVX    A,@DPTR
+0052 903006            MOV     DPTR,#03006H
+0055 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 334
+0056 900000      R     MOV     DPTR,#MSB
+0059 E0                MOVX    A,@DPTR
+                                           ; SOURCE LINE # 336
+005A 120000      R     LCALL   L?0168
+005D EF                MOV     A,R7
+005E 6047              JZ      ?C0043
+                                           ; SOURCE LINE # 337
+                                           ; SOURCE LINE # 339
+                                           ; SOURCE LINE # 340
+0060 120000      R     LCALL   L?0165
+0063 EF                MOV     A,R7
+0064 6041              JZ      ?C0043
+                                           ; SOURCE LINE # 341
+                                           ; SOURCE LINE # 342
+;---- Variable 'cunt' assigned to Register 'R7' ----
+0066 E4                CLR     A
+0067 FF                MOV     R7,A
+0068         ?C0045:
+0068 903005            MOV     DPTR,#03005H
+006B E0                MOVX    A,@DPTR
+006C FE                MOV     R6,A
+006D EF                MOV     A,R7
+006E C3                CLR     C
+006F 9E                SUBB    A,R6
+0070 5028              JNC     ?C0046
+                                           ; SOURCE LINE # 343
+                                           ; SOURCE LINE # 344
+0072 EF                MOV     A,R7
+0073 903007            MOV     DPTR,#03007H
+0076 7007              JNZ     ?C0048
+                                           ; SOURCE LINE # 345
+                                           ; SOURCE LINE # 346
+0078 E0                MOVX    A,@DPTR
+0079 900000      E     MOV     DPTR,#PECI_CompletionCode
+007C F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 347
+007D 8018              SJMP    ?C0047
+007F         ?C0048:
+                                           ; SOURCE LINE # 349
+                                           ; SOURCE LINE # 350
+007F E0                MOVX    A,@DPTR
+0080 FE                MOV     R6,A
+0081 ED                MOV     A,R5
+0082 2F                ADD     A,R7
+0083 F582              MOV     DPL,A
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 29  
+
+0085 E4                CLR     A
+0086 3C                ADDC    A,R4
+0087 F583              MOV     DPH,A
+0089 E582              MOV     A,DPL
+008B 24FF              ADD     A,#0FFH
+008D F582              MOV     DPL,A
+008F E583              MOV     A,DPH
+0091 34FF              ADDC    A,#0FFH
+0093 F583              MOV     DPH,A
+0095 EE                MOV     A,R6
+0096 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 351
+                                           ; SOURCE LINE # 352
+0097         ?C0047:
+0097 0F                INC     R7
+0098 80CE              SJMP    ?C0045
+009A         ?C0046:
+                                           ; SOURCE LINE # 354
+009A 900000      E     MOV     DPTR,#PECI_CompletionCode
+009D E0                MOVX    A,@DPTR
+009E B44004            CJNE    A,#040H,?C0050
+                                           ; SOURCE LINE # 355
+                                           ; SOURCE LINE # 356
+00A1 7A01              MOV     R2,#01H
+                                           ; SOURCE LINE # 357
+00A3 8002              SJMP    ?C0043
+00A5         ?C0050:
+                                           ; SOURCE LINE # 359
+                                           ; SOURCE LINE # 360
+00A5 E4                CLR     A
+00A6 FA                MOV     R2,A
+                                           ; SOURCE LINE # 361
+                                           ; SOURCE LINE # 362
+                                           ; SOURCE LINE # 363
+00A7         ?C0043:
+                                           ; SOURCE LINE # 365
+00A7 120000      R     LCALL   PECI_HostDisable
+                                           ; SOURCE LINE # 366
+00AA 120000      R     LCALL   ResetPECIStatus
+                                           ; SOURCE LINE # 367
+00AD AF02              MOV     R7,AR2
+                                           ; SOURCE LINE # 368
+00AF         ?C0052:
+00AF 22                RET     
+             ; FUNCTION _PECI_RdPkgConfig (END)
+
+             ; FUNCTION _PECI_WrPkgConfig (BEGIN)
+                                           ; SOURCE LINE # 386
+0000 900000      R     MOV     DPTR,#WriteData
+;---- Variable 'addr' assigned to Register 'R6' ----
+;---- Variable 'Domain' assigned to Register 'R3' ----
+                                           ; SOURCE LINE # 387
+                                           ; SOURCE LINE # 389
+;---- Variable 'done' assigned to Register 'R4' ----
+                                           ; SOURCE LINE # 391
+                                           ; SOURCE LINE # 392
+                                           ; SOURCE LINE # 395
+0003 120000      R     LCALL   L?0161
+                                           ; SOURCE LINE # 396
+0006 E4                CLR     A
+0007 900000      E     MOV     DPTR,#PECI_CRC8
+000A F0                MOVX    @DPTR,A
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 30  
+
+                                           ; SOURCE LINE # 401
+000B 903003            MOV     DPTR,#03003H
+000E EE                MOV     A,R6
+000F F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 402
+0010 FF                MOV     R7,A
+0011 120000      R     LCALL   _PECI_CalcCRC8
+                                           ; SOURCE LINE # 403
+0014 900000      R     MOV     DPTR,#WriteLen
+0017 E0                MOVX    A,@DPTR
+0018 FF                MOV     R7,A
+0019 903004            MOV     DPTR,#03004H
+001C F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 404
+001D 120000      R     LCALL   _PECI_CalcCRC8
+                                           ; SOURCE LINE # 405
+0020 903005            MOV     DPTR,#03005H
+0023 7401              MOV     A,#01H
+0025 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 406
+0026 FF                MOV     R7,A
+0027 120000      R     LCALL   _PECI_CalcCRC8
+                                           ; SOURCE LINE # 408
+002A EB                MOV     A,R3
+002B C3                CLR     C
+002C 9402              SUBB    A,#02H
+002E 500A              JNC     ?C0053
+                                           ; SOURCE LINE # 409
+                                           ; SOURCE LINE # 410
+0030 EB                MOV     A,R3
+0031 24A5              ADD     A,#0A5H
+0033 FF                MOV     R7,A
+0034 903002            MOV     DPTR,#03002H
+0037 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 411
+                                           ; SOURCE LINE # 412
+0038 8007              SJMP    ?C0151
+003A         ?C0053:
+                                           ; SOURCE LINE # 414
+                                           ; SOURCE LINE # 415
+003A 903002            MOV     DPTR,#03002H
+003D 74A5              MOV     A,#0A5H
+003F F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 416
+0040 FF                MOV     R7,A
+0041         ?C0151:
+0041 120000      R     LCALL   _PECI_CalcCRC8
+                                           ; SOURCE LINE # 417
+0044         ?C0054:
+                                           ; SOURCE LINE # 419
+0044 900000      R     MOV     DPTR,#Retry
+0047 E0                MOVX    A,@DPTR
+0048 FF                MOV     R7,A
+0049 C3                CLR     C
+004A 9402              SUBB    A,#02H
+004C 500A              JNC     ?C0055
+                                           ; SOURCE LINE # 420
+                                           ; SOURCE LINE # 421
+004E EF                MOV     A,R7
+004F 2402              ADD     A,#02H
+0051 FF                MOV     R7,A
+0052 903006            MOV     DPTR,#03006H
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 31  
+
+0055 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 422
+                                           ; SOURCE LINE # 423
+0056 8007              SJMP    ?C0152
+0058         ?C0055:
+                                           ; SOURCE LINE # 425
+                                           ; SOURCE LINE # 426
+0058 903006            MOV     DPTR,#03006H
+005B 7402              MOV     A,#02H
+005D F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 427
+005E FF                MOV     R7,A
+005F         ?C0152:
+005F 120000      R     LCALL   _PECI_CalcCRC8
+                                           ; SOURCE LINE # 428
+0062         ?C0056:
+                                           ; SOURCE LINE # 430
+0062 900000      R     MOV     DPTR,#Index
+0065 E0                MOVX    A,@DPTR
+0066 FF                MOV     R7,A
+0067 903006            MOV     DPTR,#03006H
+006A F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 431
+006B 120000      R     LCALL   _PECI_CalcCRC8
+                                           ; SOURCE LINE # 432
+006E 900000      R     MOV     DPTR,#LSB
+0071 E0                MOVX    A,@DPTR
+0072 FF                MOV     R7,A
+0073 903006            MOV     DPTR,#03006H
+0076 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 433
+0077 120000      R     LCALL   _PECI_CalcCRC8
+                                           ; SOURCE LINE # 434
+007A 900000      R     MOV     DPTR,#MSB
+007D E0                MOVX    A,@DPTR
+007E FF                MOV     R7,A
+007F 903006            MOV     DPTR,#03006H
+0082 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 435
+0083 120000      R     LCALL   _PECI_CalcCRC8
+                                           ; SOURCE LINE # 437
+;---- Variable 'cunt' assigned to Register 'R3' ----
+0086 E4                CLR     A
+0087 FB                MOV     R3,A
+0088         ?C0057:
+0088 900000      R     MOV     DPTR,#WriteLen
+008B E0                MOVX    A,@DPTR
+008C 24FA              ADD     A,#0FAH
+008E FF                MOV     R7,A
+008F EB                MOV     A,R3
+0090 C3                CLR     C
+0091 9F                SUBB    A,R7
+0092 5009              JNC     ?C0058
+                                           ; SOURCE LINE # 438
+                                           ; SOURCE LINE # 439
+0094 900000      R     MOV     DPTR,#WriteData
+                                           ; SOURCE LINE # 440
+0097 120000      R     LCALL   L?0159
+                                           ; SOURCE LINE # 441
+009A 0B                INC     R3
+009B 80EB              SJMP    ?C0057
+009D         ?C0058:
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 32  
+
+                                           ; SOURCE LINE # 444
+                                           ; SOURCE LINE # 445
+                                           ; SOURCE LINE # 448
+009D 120000      R     LCALL   L?0166
+00A0 EF                MOV     A,R7
+00A1 6018              JZ      ?C0060
+                                           ; SOURCE LINE # 449
+                                           ; SOURCE LINE # 450
+                                           ; SOURCE LINE # 451
+00A3 120000      R     LCALL   L?0165
+00A6 EF                MOV     A,R7
+00A7 6012              JZ      ?C0060
+                                           ; SOURCE LINE # 452
+                                           ; SOURCE LINE # 453
+00A9 903007            MOV     DPTR,#03007H
+00AC E0                MOVX    A,@DPTR
+00AD 900000      E     MOV     DPTR,#PECI_CompletionCode
+00B0 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 454
+00B1 E0                MOVX    A,@DPTR
+00B2 B44004            CJNE    A,#040H,?C0062
+                                           ; SOURCE LINE # 455
+                                           ; SOURCE LINE # 456
+00B5 7C01              MOV     R4,#01H
+                                           ; SOURCE LINE # 457
+00B7 8002              SJMP    ?C0060
+00B9         ?C0062:
+                                           ; SOURCE LINE # 459
+                                           ; SOURCE LINE # 460
+00B9 E4                CLR     A
+00BA FC                MOV     R4,A
+                                           ; SOURCE LINE # 461
+                                           ; SOURCE LINE # 462
+                                           ; SOURCE LINE # 463
+00BB         ?C0060:
+                                           ; SOURCE LINE # 465
+00BB 120000      R     LCALL   PECI_HostDisable
+                                           ; SOURCE LINE # 466
+00BE 120000      R     LCALL   ResetPECIStatus
+                                           ; SOURCE LINE # 467
+00C1 AF04              MOV     R7,AR4
+                                           ; SOURCE LINE # 468
+00C3         ?C0064:
+00C3 22                RET     
+             ; FUNCTION _PECI_WrPkgConfig (END)
+
+             ; FUNCTION _PECI_RdIAMSR (BEGIN)
+                                           ; SOURCE LINE # 486
+;---- Variable 'addr' assigned to Register 'R6' ----
+0000 AE07              MOV     R6,AR7
+;---- Variable 'Domain' assigned to Register 'R3' ----
+;---- Variable 'ReadData' assigned to Register 'R4/R5' ----
+                                           ; SOURCE LINE # 487
+                                           ; SOURCE LINE # 489
+;---- Variable 'done' assigned to Register 'R2' ----
+0002 E4                CLR     A
+0003 FA                MOV     R2,A
+                                           ; SOURCE LINE # 491
+                                           ; SOURCE LINE # 492
+0004 120000      R     LCALL   L?0163
+                                           ; SOURCE LINE # 493
+0007 903003            MOV     DPTR,#03003H
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 33  
+
+000A EE                MOV     A,R6
+000B F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 494
+000C A3                INC     DPTR
+000D 7405              MOV     A,#05H
+000F F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 495
+0010 900000      R     MOV     DPTR,#ReadLen
+0013 E0                MOVX    A,@DPTR
+0014 903005            MOV     DPTR,#03005H
+0017 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 496
+0018 EB                MOV     A,R3
+0019 C3                CLR     C
+001A 9402              SUBB    A,#02H
+001C 5009              JNC     ?C0065
+                                           ; SOURCE LINE # 497
+                                           ; SOURCE LINE # 498
+001E EB                MOV     A,R3
+001F 24B1              ADD     A,#0B1H
+0021 903002            MOV     DPTR,#03002H
+0024 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 499
+0025 8006              SJMP    ?C0066
+0027         ?C0065:
+                                           ; SOURCE LINE # 501
+                                           ; SOURCE LINE # 502
+0027 903002            MOV     DPTR,#03002H
+002A 74B1              MOV     A,#0B1H
+002C F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 503
+002D         ?C0066:
+                                           ; SOURCE LINE # 505
+002D 900000      R     MOV     DPTR,#Retry
+0030 E0                MOVX    A,@DPTR
+0031 FF                MOV     R7,A
+0032 C3                CLR     C
+0033 9402              SUBB    A,#02H
+0035 5009              JNC     ?C0067
+                                           ; SOURCE LINE # 506
+                                           ; SOURCE LINE # 507
+0037 EF                MOV     A,R7
+0038 2402              ADD     A,#02H
+003A 903006            MOV     DPTR,#03006H
+003D F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 508
+003E 8006              SJMP    ?C0068
+0040         ?C0067:
+                                           ; SOURCE LINE # 510
+                                           ; SOURCE LINE # 511
+0040 903006            MOV     DPTR,#03006H
+0043 7402              MOV     A,#02H
+0045 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 512
+0046         ?C0068:
+                                           ; SOURCE LINE # 514
+0046 900000      R     MOV     DPTR,#ProcessorID
+0049 E0                MOVX    A,@DPTR
+004A 903006            MOV     DPTR,#03006H
+004D F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 515
+004E 900000      R     MOV     DPTR,#LSB
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 34  
+
+0051 E0                MOVX    A,@DPTR
+0052 903006            MOV     DPTR,#03006H
+0055 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 516
+0056 900000      R     MOV     DPTR,#MSB
+0059 E0                MOVX    A,@DPTR
+                                           ; SOURCE LINE # 518
+005A 120000      R     LCALL   L?0168
+005D EF                MOV     A,R7
+005E 6047              JZ      ?C0069
+                                           ; SOURCE LINE # 519
+                                           ; SOURCE LINE # 521
+                                           ; SOURCE LINE # 522
+0060 120000      R     LCALL   L?0165
+0063 EF                MOV     A,R7
+0064 6041              JZ      ?C0069
+                                           ; SOURCE LINE # 523
+                                           ; SOURCE LINE # 524
+;---- Variable 'cunt' assigned to Register 'R7' ----
+0066 E4                CLR     A
+0067 FF                MOV     R7,A
+0068         ?C0071:
+0068 903005            MOV     DPTR,#03005H
+006B E0                MOVX    A,@DPTR
+006C FE                MOV     R6,A
+006D EF                MOV     A,R7
+006E C3                CLR     C
+006F 9E                SUBB    A,R6
+0070 5028              JNC     ?C0072
+                                           ; SOURCE LINE # 525
+                                           ; SOURCE LINE # 526
+0072 EF                MOV     A,R7
+0073 903007            MOV     DPTR,#03007H
+0076 7007              JNZ     ?C0074
+                                           ; SOURCE LINE # 527
+                                           ; SOURCE LINE # 528
+0078 E0                MOVX    A,@DPTR
+0079 900000      E     MOV     DPTR,#PECI_CompletionCode
+007C F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 529
+007D 8018              SJMP    ?C0073
+007F         ?C0074:
+                                           ; SOURCE LINE # 531
+                                           ; SOURCE LINE # 532
+007F E0                MOVX    A,@DPTR
+0080 FE                MOV     R6,A
+0081 ED                MOV     A,R5
+0082 2F                ADD     A,R7
+0083 F582              MOV     DPL,A
+0085 E4                CLR     A
+0086 3C                ADDC    A,R4
+0087 F583              MOV     DPH,A
+0089 E582              MOV     A,DPL
+008B 24FF              ADD     A,#0FFH
+008D F582              MOV     DPL,A
+008F E583              MOV     A,DPH
+0091 34FF              ADDC    A,#0FFH
+0093 F583              MOV     DPH,A
+0095 EE                MOV     A,R6
+0096 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 533
+                                           ; SOURCE LINE # 534
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 35  
+
+0097         ?C0073:
+0097 0F                INC     R7
+0098 80CE              SJMP    ?C0071
+009A         ?C0072:
+                                           ; SOURCE LINE # 536
+009A 900000      E     MOV     DPTR,#PECI_CompletionCode
+009D E0                MOVX    A,@DPTR
+009E B44004            CJNE    A,#040H,?C0076
+                                           ; SOURCE LINE # 537
+                                           ; SOURCE LINE # 538
+00A1 7A01              MOV     R2,#01H
+                                           ; SOURCE LINE # 539
+00A3 8002              SJMP    ?C0069
+00A5         ?C0076:
+                                           ; SOURCE LINE # 541
+                                           ; SOURCE LINE # 542
+00A5 E4                CLR     A
+00A6 FA                MOV     R2,A
+                                           ; SOURCE LINE # 543
+                                           ; SOURCE LINE # 544
+                                           ; SOURCE LINE # 545
+00A7         ?C0069:
+                                           ; SOURCE LINE # 547
+00A7 120000      R     LCALL   PECI_HostDisable
+                                           ; SOURCE LINE # 548
+00AA 120000      R     LCALL   ResetPECIStatus
+                                           ; SOURCE LINE # 549
+00AD AF02              MOV     R7,AR2
+                                           ; SOURCE LINE # 550
+00AF         ?C0078:
+00AF 22                RET     
+             ; FUNCTION _PECI_RdIAMSR (END)
+
+             ; FUNCTION _PECI_WrIAMSR (BEGIN)
+                                           ; SOURCE LINE # 568
+0000 900000      R     MOV     DPTR,#WriteData
+;---- Variable 'addr' assigned to Register 'R6' ----
+;---- Variable 'Domain' assigned to Register 'R3' ----
+                                           ; SOURCE LINE # 569
+                                           ; SOURCE LINE # 571
+;---- Variable 'done' assigned to Register 'R4' ----
+                                           ; SOURCE LINE # 573
+                                           ; SOURCE LINE # 574
+                                           ; SOURCE LINE # 577
+0003 120000      R     LCALL   L?0161
+                                           ; SOURCE LINE # 578
+0006 E4                CLR     A
+0007 900000      E     MOV     DPTR,#PECI_CRC8
+000A F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 583
+000B 903003            MOV     DPTR,#03003H
+000E EE                MOV     A,R6
+000F F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 584
+0010 FF                MOV     R7,A
+0011 120000      R     LCALL   _PECI_CalcCRC8
+                                           ; SOURCE LINE # 585
+0014 900000      R     MOV     DPTR,#WriteLen
+0017 E0                MOVX    A,@DPTR
+0018 FF                MOV     R7,A
+0019 903004            MOV     DPTR,#03004H
+001C F0                MOVX    @DPTR,A
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 36  
+
+                                           ; SOURCE LINE # 586
+001D 120000      R     LCALL   _PECI_CalcCRC8
+                                           ; SOURCE LINE # 587
+0020 903005            MOV     DPTR,#03005H
+0023 7401              MOV     A,#01H
+0025 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 588
+0026 FF                MOV     R7,A
+0027 120000      R     LCALL   _PECI_CalcCRC8
+                                           ; SOURCE LINE # 589
+002A EB                MOV     A,R3
+002B C3                CLR     C
+002C 9402              SUBB    A,#02H
+002E 500A              JNC     ?C0079
+                                           ; SOURCE LINE # 590
+                                           ; SOURCE LINE # 591
+0030 EB                MOV     A,R3
+0031 24B5              ADD     A,#0B5H
+0033 FF                MOV     R7,A
+0034 903002            MOV     DPTR,#03002H
+0037 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 592
+                                           ; SOURCE LINE # 593
+0038 8007              SJMP    ?C0153
+003A         ?C0079:
+                                           ; SOURCE LINE # 595
+                                           ; SOURCE LINE # 596
+003A 903002            MOV     DPTR,#03002H
+003D 74B5              MOV     A,#0B5H
+003F F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 597
+0040 FF                MOV     R7,A
+0041         ?C0153:
+0041 120000      R     LCALL   _PECI_CalcCRC8
+                                           ; SOURCE LINE # 598
+0044         ?C0080:
+                                           ; SOURCE LINE # 600
+0044 900000      R     MOV     DPTR,#Retry
+0047 E0                MOVX    A,@DPTR
+0048 FF                MOV     R7,A
+0049 C3                CLR     C
+004A 9402              SUBB    A,#02H
+004C 500A              JNC     ?C0081
+                                           ; SOURCE LINE # 601
+                                           ; SOURCE LINE # 602
+004E EF                MOV     A,R7
+004F 2402              ADD     A,#02H
+0051 FF                MOV     R7,A
+0052 903006            MOV     DPTR,#03006H
+0055 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 603
+                                           ; SOURCE LINE # 604
+0056 8007              SJMP    ?C0154
+0058         ?C0081:
+                                           ; SOURCE LINE # 606
+                                           ; SOURCE LINE # 607
+0058 903006            MOV     DPTR,#03006H
+005B 7402              MOV     A,#02H
+005D F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 608
+005E FF                MOV     R7,A
+005F         ?C0154:
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 37  
+
+005F 120000      R     LCALL   _PECI_CalcCRC8
+                                           ; SOURCE LINE # 609
+0062         ?C0082:
+                                           ; SOURCE LINE # 611
+0062 900000      R     MOV     DPTR,#ProcessorID
+0065 E0                MOVX    A,@DPTR
+0066 FF                MOV     R7,A
+0067 903006            MOV     DPTR,#03006H
+006A F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 612
+006B 120000      R     LCALL   _PECI_CalcCRC8
+                                           ; SOURCE LINE # 613
+006E 900000      R     MOV     DPTR,#LSB
+0071 E0                MOVX    A,@DPTR
+0072 FF                MOV     R7,A
+0073 903006            MOV     DPTR,#03006H
+0076 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 614
+0077 120000      R     LCALL   _PECI_CalcCRC8
+                                           ; SOURCE LINE # 615
+007A 900000      R     MOV     DPTR,#MSB
+007D E0                MOVX    A,@DPTR
+007E FF                MOV     R7,A
+007F 903006            MOV     DPTR,#03006H
+0082 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 616
+0083 120000      R     LCALL   _PECI_CalcCRC8
+                                           ; SOURCE LINE # 618
+;---- Variable 'cunt' assigned to Register 'R3' ----
+0086 E4                CLR     A
+0087 FB                MOV     R3,A
+0088         ?C0083:
+0088 900000      R     MOV     DPTR,#WriteLen
+008B E0                MOVX    A,@DPTR
+008C 24FA              ADD     A,#0FAH
+008E FF                MOV     R7,A
+008F EB                MOV     A,R3
+0090 C3                CLR     C
+0091 9F                SUBB    A,R7
+0092 5009              JNC     ?C0084
+                                           ; SOURCE LINE # 619
+                                           ; SOURCE LINE # 620
+0094 900000      R     MOV     DPTR,#WriteData
+                                           ; SOURCE LINE # 621
+0097 120000      R     LCALL   L?0159
+                                           ; SOURCE LINE # 622
+009A 0B                INC     R3
+009B 80EB              SJMP    ?C0083
+009D         ?C0084:
+                                           ; SOURCE LINE # 625
+                                           ; SOURCE LINE # 626
+                                           ; SOURCE LINE # 629
+009D 120000      R     LCALL   L?0166
+00A0 EF                MOV     A,R7
+00A1 6018              JZ      ?C0086
+                                           ; SOURCE LINE # 630
+                                           ; SOURCE LINE # 631
+                                           ; SOURCE LINE # 632
+00A3 120000      R     LCALL   L?0165
+00A6 EF                MOV     A,R7
+00A7 6012              JZ      ?C0086
+                                           ; SOURCE LINE # 633
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 38  
+
+                                           ; SOURCE LINE # 634
+00A9 903007            MOV     DPTR,#03007H
+00AC E0                MOVX    A,@DPTR
+00AD 900000      E     MOV     DPTR,#PECI_CompletionCode
+00B0 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 635
+00B1 E0                MOVX    A,@DPTR
+00B2 B44004            CJNE    A,#040H,?C0088
+                                           ; SOURCE LINE # 636
+                                           ; SOURCE LINE # 637
+00B5 7C01              MOV     R4,#01H
+                                           ; SOURCE LINE # 638
+00B7 8002              SJMP    ?C0086
+00B9         ?C0088:
+                                           ; SOURCE LINE # 640
+                                           ; SOURCE LINE # 641
+00B9 E4                CLR     A
+00BA FC                MOV     R4,A
+                                           ; SOURCE LINE # 642
+                                           ; SOURCE LINE # 643
+                                           ; SOURCE LINE # 644
+00BB         ?C0086:
+                                           ; SOURCE LINE # 646
+00BB 120000      R     LCALL   PECI_HostDisable
+                                           ; SOURCE LINE # 647
+00BE 120000      R     LCALL   ResetPECIStatus
+                                           ; SOURCE LINE # 648
+00C1 AF04              MOV     R7,AR4
+                                           ; SOURCE LINE # 649
+00C3         ?C0090:
+00C3 22                RET     
+             ; FUNCTION _PECI_WrIAMSR (END)
+
+             ; FUNCTION _PECI_RdPCIConfig (BEGIN)
+                                           ; SOURCE LINE # 665
+0000 900000      R     MOV     DPTR,#ReadData
+0003 EC                MOV     A,R4
+0004 F0                MOVX    @DPTR,A
+0005 A3                INC     DPTR
+0006 ED                MOV     A,R5
+0007 F0                MOVX    @DPTR,A
+;---- Variable 'addr' assigned to Register 'R6' ----
+0008 AE07              MOV     R6,AR7
+;---- Variable 'Domain' assigned to Register 'R3' ----
+                                           ; SOURCE LINE # 666
+                                           ; SOURCE LINE # 668
+;---- Variable 'done' assigned to Register 'R5' ----
+000A E4                CLR     A
+000B FD                MOV     R5,A
+                                           ; SOURCE LINE # 670
+                                           ; SOURCE LINE # 671
+000C 120000      R     LCALL   L?0163
+                                           ; SOURCE LINE # 672
+000F 903003            MOV     DPTR,#03003H
+0012 EE                MOV     A,R6
+0013 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 673
+0014 A3                INC     DPTR
+0015 7406              MOV     A,#06H
+0017 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 674
+0018 900000      R     MOV     DPTR,#ReadLen
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 39  
+
+001B E0                MOVX    A,@DPTR
+001C 903005            MOV     DPTR,#03005H
+001F F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 675
+0020 EB                MOV     A,R3
+0021 C3                CLR     C
+0022 9402              SUBB    A,#02H
+0024 5009              JNC     ?C0091
+                                           ; SOURCE LINE # 676
+                                           ; SOURCE LINE # 677
+0026 EB                MOV     A,R3
+0027 2461              ADD     A,#061H
+0029 903002            MOV     DPTR,#03002H
+002C F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 678
+002D 8006              SJMP    ?C0092
+002F         ?C0091:
+                                           ; SOURCE LINE # 680
+                                           ; SOURCE LINE # 681
+002F 903002            MOV     DPTR,#03002H
+0032 7461              MOV     A,#061H
+0034 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 682
+0035         ?C0092:
+                                           ; SOURCE LINE # 684
+0035 900000      R     MOV     DPTR,#Retry
+0038 E0                MOVX    A,@DPTR
+0039 FF                MOV     R7,A
+003A C3                CLR     C
+003B 9402              SUBB    A,#02H
+003D 5009              JNC     ?C0093
+                                           ; SOURCE LINE # 685
+                                           ; SOURCE LINE # 686
+003F EF                MOV     A,R7
+0040 2402              ADD     A,#02H
+0042 903006            MOV     DPTR,#03006H
+0045 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 687
+0046 8006              SJMP    ?C0094
+0048         ?C0093:
+                                           ; SOURCE LINE # 689
+                                           ; SOURCE LINE # 690
+0048 903006            MOV     DPTR,#03006H
+004B 7402              MOV     A,#02H
+004D F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 691
+004E         ?C0094:
+                                           ; SOURCE LINE # 693
+;---- Variable 'cunt' assigned to Register 'R4' ----
+004E E4                CLR     A
+004F FC                MOV     R4,A
+0050         ?C0095:
+                                           ; SOURCE LINE # 694
+                                           ; SOURCE LINE # 695
+0050 900000      R     MOV     DPTR,#pciaddr
+0053 E0                MOVX    A,@DPTR
+0054 FE                MOV     R6,A
+0055 A3                INC     DPTR
+0056 E0                MOVX    A,@DPTR
+0057 2C                ADD     A,R4
+0058 F582              MOV     DPL,A
+005A E4                CLR     A
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 40  
+
+005B 3E                ADDC    A,R6
+005C F583              MOV     DPH,A
+005E E0                MOVX    A,@DPTR
+005F 903006            MOV     DPTR,#03006H
+0062 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 696
+0063 0C                INC     R4
+0064 EC                MOV     A,R4
+0065 B404E8            CJNE    A,#04H,?C0095
+0068         ?C0096:
+                                           ; SOURCE LINE # 698
+0068 120000      R     LCALL   PECI_CheckHostBusy
+006B EF                MOV     A,R7
+006C 603F              JZ      ?C0098
+                                           ; SOURCE LINE # 699
+                                           ; SOURCE LINE # 701
+                                           ; SOURCE LINE # 702
+006E 120000      R     LCALL   L?0165
+0071 EF                MOV     A,R7
+0072 6039              JZ      ?C0098
+                                           ; SOURCE LINE # 703
+                                           ; SOURCE LINE # 704
+0074 E4                CLR     A
+0075 FC                MOV     R4,A
+0076         ?C0100:
+0076 903005            MOV     DPTR,#03005H
+0079 E0                MOVX    A,@DPTR
+007A FF                MOV     R7,A
+007B EC                MOV     A,R4
+007C C3                CLR     C
+007D 9F                SUBB    A,R7
+007E 5018              JNC     ?C0101
+                                           ; SOURCE LINE # 705
+                                           ; SOURCE LINE # 706
+0080 903007            MOV     DPTR,#03007H
+0083 E0                MOVX    A,@DPTR
+0084 FF                MOV     R7,A
+0085 900000      R     MOV     DPTR,#ReadData
+0088 E0                MOVX    A,@DPTR
+0089 FA                MOV     R2,A
+008A A3                INC     DPTR
+008B E0                MOVX    A,@DPTR
+008C 2C                ADD     A,R4
+008D F582              MOV     DPL,A
+008F E4                CLR     A
+0090 3A                ADDC    A,R2
+0091 F583              MOV     DPH,A
+0093 EF                MOV     A,R7
+0094 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 707
+0095 0C                INC     R4
+0096 80DE              SJMP    ?C0100
+0098         ?C0101:
+                                           ; SOURCE LINE # 709
+0098 900000      R     MOV     DPTR,#ReadData
+009B E0                MOVX    A,@DPTR
+009C FE                MOV     R6,A
+009D A3                INC     DPTR
+009E E0                MOVX    A,@DPTR
+009F F582              MOV     DPL,A
+00A1 8E83              MOV     DPH,R6
+00A3 E0                MOVX    A,@DPTR
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 41  
+
+00A4 B44004            CJNE    A,#040H,?C0103
+                                           ; SOURCE LINE # 710
+                                           ; SOURCE LINE # 711
+00A7 7D01              MOV     R5,#01H
+                                           ; SOURCE LINE # 712
+00A9 8002              SJMP    ?C0098
+00AB         ?C0103:
+                                           ; SOURCE LINE # 714
+                                           ; SOURCE LINE # 715
+00AB E4                CLR     A
+00AC FD                MOV     R5,A
+                                           ; SOURCE LINE # 716
+                                           ; SOURCE LINE # 717
+                                           ; SOURCE LINE # 718
+00AD         ?C0098:
+                                           ; SOURCE LINE # 720
+00AD 120000      R     LCALL   PECI_HostDisable
+                                           ; SOURCE LINE # 721
+00B0 120000      R     LCALL   ResetPECIStatus
+                                           ; SOURCE LINE # 722
+00B3 AF05              MOV     R7,AR5
+                                           ; SOURCE LINE # 723
+00B5         ?C0105:
+00B5 22                RET     
+             ; FUNCTION _PECI_RdPCIConfig (END)
+
+             ; FUNCTION _PECI_WrPCIConfig (BEGIN)
+                                           ; SOURCE LINE # 739
+0000 900000      R     MOV     DPTR,#WriteData
+;---- Variable 'addr' assigned to Register 'R6' ----
+;---- Variable 'Domain' assigned to Register 'R3' ----
+                                           ; SOURCE LINE # 740
+                                           ; SOURCE LINE # 742
+;---- Variable 'done' assigned to Register 'R4' ----
+                                           ; SOURCE LINE # 744
+                                           ; SOURCE LINE # 745
+                                           ; SOURCE LINE # 748
+0003 120000      R     LCALL   L?0162
+                                           ; SOURCE LINE # 749
+0006 E4                CLR     A
+0007 900000      E     MOV     DPTR,#PECI_CRC8
+000A F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 754
+000B 903003            MOV     DPTR,#03003H
+000E EE                MOV     A,R6
+000F F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 755
+0010 FF                MOV     R7,A
+0011 120000      R     LCALL   _PECI_CalcCRC8
+                                           ; SOURCE LINE # 756
+0014 900000      R     MOV     DPTR,#WriteLen
+0017 E0                MOVX    A,@DPTR
+0018 FF                MOV     R7,A
+0019 903004            MOV     DPTR,#03004H
+001C F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 757
+001D 120000      R     LCALL   _PECI_CalcCRC8
+                                           ; SOURCE LINE # 758
+0020 903005            MOV     DPTR,#03005H
+0023 7401              MOV     A,#01H
+0025 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 759
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 42  
+
+0026 FF                MOV     R7,A
+0027 120000      R     LCALL   _PECI_CalcCRC8
+                                           ; SOURCE LINE # 760
+002A EB                MOV     A,R3
+002B C3                CLR     C
+002C 9402              SUBB    A,#02H
+002E 500A              JNC     ?C0106
+                                           ; SOURCE LINE # 761
+                                           ; SOURCE LINE # 762
+0030 EB                MOV     A,R3
+0031 2465              ADD     A,#065H
+0033 FF                MOV     R7,A
+0034 903002            MOV     DPTR,#03002H
+0037 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 763
+                                           ; SOURCE LINE # 764
+0038 8007              SJMP    ?C0155
+003A         ?C0106:
+                                           ; SOURCE LINE # 766
+                                           ; SOURCE LINE # 767
+003A 903002            MOV     DPTR,#03002H
+003D 7465              MOV     A,#065H
+003F F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 768
+0040 FF                MOV     R7,A
+0041         ?C0155:
+0041 120000      R     LCALL   _PECI_CalcCRC8
+                                           ; SOURCE LINE # 769
+0044         ?C0107:
+                                           ; SOURCE LINE # 771
+0044 900000      R     MOV     DPTR,#Retry
+0047 E0                MOVX    A,@DPTR
+0048 FF                MOV     R7,A
+0049 C3                CLR     C
+004A 9402              SUBB    A,#02H
+004C 500A              JNC     ?C0108
+                                           ; SOURCE LINE # 772
+                                           ; SOURCE LINE # 773
+004E EF                MOV     A,R7
+004F 2402              ADD     A,#02H
+0051 FF                MOV     R7,A
+0052 903006            MOV     DPTR,#03006H
+0055 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 774
+                                           ; SOURCE LINE # 775
+0056 8007              SJMP    ?C0156
+0058         ?C0108:
+                                           ; SOURCE LINE # 777
+                                           ; SOURCE LINE # 778
+0058 903006            MOV     DPTR,#03006H
+005B 7402              MOV     A,#02H
+005D F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 779
+005E FF                MOV     R7,A
+005F         ?C0156:
+005F 120000      R     LCALL   _PECI_CalcCRC8
+                                           ; SOURCE LINE # 780
+0062         ?C0109:
+                                           ; SOURCE LINE # 782
+;---- Variable 'cunt' assigned to Register 'R3' ----
+0062 E4                CLR     A
+0063 FB                MOV     R3,A
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 43  
+
+0064         ?C0110:
+                                           ; SOURCE LINE # 783
+                                           ; SOURCE LINE # 784
+0064 900000      R     MOV     DPTR,#PCIAddr
+                                           ; SOURCE LINE # 785
+0067 120000      R     LCALL   L?0160
+                                           ; SOURCE LINE # 786
+006A 0B                INC     R3
+006B EB                MOV     A,R3
+006C B404F5            CJNE    A,#04H,?C0110
+006F         ?C0111:
+                                           ; SOURCE LINE # 788
+006F E4                CLR     A
+0070 FB                MOV     R3,A
+0071         ?C0113:
+0071 900000      R     MOV     DPTR,#WriteLen
+0074 E0                MOVX    A,@DPTR
+0075 24F9              ADD     A,#0F9H
+0077 FF                MOV     R7,A
+0078 EB                MOV     A,R3
+0079 C3                CLR     C
+007A 9F                SUBB    A,R7
+007B 5009              JNC     ?C0114
+                                           ; SOURCE LINE # 789
+                                           ; SOURCE LINE # 790
+007D 900000      R     MOV     DPTR,#WriteData
+                                           ; SOURCE LINE # 791
+0080 120000      R     LCALL   L?0160
+                                           ; SOURCE LINE # 792
+0083 0B                INC     R3
+0084 80EB              SJMP    ?C0113
+0086         ?C0114:
+                                           ; SOURCE LINE # 795
+                                           ; SOURCE LINE # 796
+                                           ; SOURCE LINE # 799
+0086 120000      R     LCALL   L?0167
+0089 EF                MOV     A,R7
+008A 6018              JZ      ?C0116
+                                           ; SOURCE LINE # 800
+                                           ; SOURCE LINE # 801
+                                           ; SOURCE LINE # 802
+008C 120000      R     LCALL   L?0165
+008F EF                MOV     A,R7
+0090 6012              JZ      ?C0116
+                                           ; SOURCE LINE # 803
+                                           ; SOURCE LINE # 804
+0092 903007            MOV     DPTR,#03007H
+0095 E0                MOVX    A,@DPTR
+0096 900000      E     MOV     DPTR,#PECI_CompletionCode
+0099 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 805
+009A E0                MOVX    A,@DPTR
+009B B44004            CJNE    A,#040H,?C0118
+                                           ; SOURCE LINE # 806
+                                           ; SOURCE LINE # 807
+009E 7C01              MOV     R4,#01H
+                                           ; SOURCE LINE # 808
+00A0 8002              SJMP    ?C0116
+00A2         ?C0118:
+                                           ; SOURCE LINE # 810
+                                           ; SOURCE LINE # 811
+00A2 E4                CLR     A
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 44  
+
+00A3 FC                MOV     R4,A
+                                           ; SOURCE LINE # 812
+                                           ; SOURCE LINE # 813
+                                           ; SOURCE LINE # 814
+00A4         ?C0116:
+                                           ; SOURCE LINE # 816
+00A4 120000      R     LCALL   PECI_HostDisable
+                                           ; SOURCE LINE # 817
+00A7 120000      R     LCALL   ResetPECIStatus
+                                           ; SOURCE LINE # 818
+00AA AF04              MOV     R7,AR4
+                                           ; SOURCE LINE # 819
+00AC         ?C0120:
+00AC 22                RET     
+             ; FUNCTION _PECI_WrPCIConfig (END)
+
+             ; FUNCTION _PECI_RdPCIConfigLocal (BEGIN)
+                                           ; SOURCE LINE # 835
+0000 900000      R     MOV     DPTR,#ReadData
+0003 EC                MOV     A,R4
+0004 F0                MOVX    @DPTR,A
+0005 A3                INC     DPTR
+0006 ED                MOV     A,R5
+0007 F0                MOVX    @DPTR,A
+;---- Variable 'addr' assigned to Register 'R6' ----
+0008 AE07              MOV     R6,AR7
+;---- Variable 'Domain' assigned to Register 'R3' ----
+                                           ; SOURCE LINE # 836
+                                           ; SOURCE LINE # 838
+;---- Variable 'done' assigned to Register 'R5' ----
+000A E4                CLR     A
+000B FD                MOV     R5,A
+                                           ; SOURCE LINE # 840
+                                           ; SOURCE LINE # 841
+000C 120000      R     LCALL   L?0163
+                                           ; SOURCE LINE # 842
+000F 903003            MOV     DPTR,#03003H
+0012 EE                MOV     A,R6
+0013 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 843
+0014 A3                INC     DPTR
+0015 7405              MOV     A,#05H
+0017 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 844
+0018 900000      R     MOV     DPTR,#ReadLen
+001B E0                MOVX    A,@DPTR
+001C 903005            MOV     DPTR,#03005H
+001F F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 845
+0020 EB                MOV     A,R3
+0021 C3                CLR     C
+0022 9402              SUBB    A,#02H
+0024 5009              JNC     ?C0121
+                                           ; SOURCE LINE # 846
+                                           ; SOURCE LINE # 847
+0026 EB                MOV     A,R3
+0027 24E1              ADD     A,#0E1H
+0029 903002            MOV     DPTR,#03002H
+002C F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 848
+002D 8006              SJMP    ?C0122
+002F         ?C0121:
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 45  
+
+                                           ; SOURCE LINE # 850
+                                           ; SOURCE LINE # 851
+002F 903002            MOV     DPTR,#03002H
+0032 74E1              MOV     A,#0E1H
+0034 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 852
+0035         ?C0122:
+                                           ; SOURCE LINE # 854
+0035 900000      R     MOV     DPTR,#Retry
+0038 E0                MOVX    A,@DPTR
+0039 FF                MOV     R7,A
+003A C3                CLR     C
+003B 9402              SUBB    A,#02H
+003D 5009              JNC     ?C0123
+                                           ; SOURCE LINE # 855
+                                           ; SOURCE LINE # 856
+003F EF                MOV     A,R7
+0040 2402              ADD     A,#02H
+0042 903006            MOV     DPTR,#03006H
+0045 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 857
+0046 8006              SJMP    ?C0124
+0048         ?C0123:
+                                           ; SOURCE LINE # 859
+                                           ; SOURCE LINE # 860
+0048 903006            MOV     DPTR,#03006H
+004B 7402              MOV     A,#02H
+004D F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 861
+004E         ?C0124:
+                                           ; SOURCE LINE # 863
+;---- Variable 'cunt' assigned to Register 'R4' ----
+004E E4                CLR     A
+004F FC                MOV     R4,A
+0050         ?C0125:
+                                           ; SOURCE LINE # 864
+                                           ; SOURCE LINE # 865
+0050 900000      R     MOV     DPTR,#pciaddr
+0053 E0                MOVX    A,@DPTR
+0054 FE                MOV     R6,A
+0055 A3                INC     DPTR
+0056 E0                MOVX    A,@DPTR
+0057 2C                ADD     A,R4
+0058 F582              MOV     DPL,A
+005A E4                CLR     A
+005B 3E                ADDC    A,R6
+005C F583              MOV     DPH,A
+005E E0                MOVX    A,@DPTR
+005F 903006            MOV     DPTR,#03006H
+0062 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 866
+0063 0C                INC     R4
+0064 EC                MOV     A,R4
+0065 B403E8            CJNE    A,#03H,?C0125
+0068         ?C0126:
+                                           ; SOURCE LINE # 868
+0068 120000      R     LCALL   PECI_CheckHostBusy
+006B EF                MOV     A,R7
+006C 603F              JZ      ?C0128
+                                           ; SOURCE LINE # 869
+                                           ; SOURCE LINE # 871
+                                           ; SOURCE LINE # 872
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 46  
+
+006E 120000      R     LCALL   L?0165
+0071 EF                MOV     A,R7
+0072 6039              JZ      ?C0128
+                                           ; SOURCE LINE # 873
+                                           ; SOURCE LINE # 874
+0074 E4                CLR     A
+0075 FC                MOV     R4,A
+0076         ?C0130:
+0076 903005            MOV     DPTR,#03005H
+0079 E0                MOVX    A,@DPTR
+007A FF                MOV     R7,A
+007B EC                MOV     A,R4
+007C C3                CLR     C
+007D 9F                SUBB    A,R7
+007E 5018              JNC     ?C0131
+                                           ; SOURCE LINE # 875
+                                           ; SOURCE LINE # 876
+0080 903007            MOV     DPTR,#03007H
+0083 E0                MOVX    A,@DPTR
+0084 FF                MOV     R7,A
+0085 900000      R     MOV     DPTR,#ReadData
+0088 E0                MOVX    A,@DPTR
+0089 FA                MOV     R2,A
+008A A3                INC     DPTR
+008B E0                MOVX    A,@DPTR
+008C 2C                ADD     A,R4
+008D F582              MOV     DPL,A
+008F E4                CLR     A
+0090 3A                ADDC    A,R2
+0091 F583              MOV     DPH,A
+0093 EF                MOV     A,R7
+0094 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 877
+0095 0C                INC     R4
+0096 80DE              SJMP    ?C0130
+0098         ?C0131:
+                                           ; SOURCE LINE # 879
+0098 900000      R     MOV     DPTR,#ReadData
+009B E0                MOVX    A,@DPTR
+009C FE                MOV     R6,A
+009D A3                INC     DPTR
+009E E0                MOVX    A,@DPTR
+009F F582              MOV     DPL,A
+00A1 8E83              MOV     DPH,R6
+00A3 E0                MOVX    A,@DPTR
+00A4 B44004            CJNE    A,#040H,?C0133
+                                           ; SOURCE LINE # 880
+                                           ; SOURCE LINE # 881
+00A7 7D01              MOV     R5,#01H
+                                           ; SOURCE LINE # 882
+00A9 8002              SJMP    ?C0128
+00AB         ?C0133:
+                                           ; SOURCE LINE # 884
+                                           ; SOURCE LINE # 885
+00AB E4                CLR     A
+00AC FD                MOV     R5,A
+                                           ; SOURCE LINE # 886
+                                           ; SOURCE LINE # 887
+                                           ; SOURCE LINE # 888
+00AD         ?C0128:
+                                           ; SOURCE LINE # 890
+00AD 120000      R     LCALL   PECI_HostDisable
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 47  
+
+                                           ; SOURCE LINE # 891
+00B0 120000      R     LCALL   ResetPECIStatus
+                                           ; SOURCE LINE # 892
+00B3 AF05              MOV     R7,AR5
+                                           ; SOURCE LINE # 893
+00B5         ?C0135:
+00B5 22                RET     
+             ; FUNCTION _PECI_RdPCIConfigLocal (END)
+
+             ; FUNCTION _PECI_WrPCIConfigLocal (BEGIN)
+                                           ; SOURCE LINE # 909
+0000 900000      R     MOV     DPTR,#WriteData
+;---- Variable 'addr' assigned to Register 'R6' ----
+;---- Variable 'Domain' assigned to Register 'R3' ----
+                                           ; SOURCE LINE # 910
+                                           ; SOURCE LINE # 912
+;---- Variable 'done' assigned to Register 'R4' ----
+                                           ; SOURCE LINE # 914
+                                           ; SOURCE LINE # 915
+                                           ; SOURCE LINE # 918
+0003 120000      R     LCALL   L?0162
+                                           ; SOURCE LINE # 919
+0006 E4                CLR     A
+0007 900000      E     MOV     DPTR,#PECI_CRC8
+000A F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 924
+000B 903003            MOV     DPTR,#03003H
+000E EE                MOV     A,R6
+000F F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 925
+0010 FF                MOV     R7,A
+0011 120000      R     LCALL   _PECI_CalcCRC8
+                                           ; SOURCE LINE # 926
+0014 900000      R     MOV     DPTR,#WriteLen
+0017 E0                MOVX    A,@DPTR
+0018 FF                MOV     R7,A
+0019 903004            MOV     DPTR,#03004H
+001C F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 927
+001D 120000      R     LCALL   _PECI_CalcCRC8
+                                           ; SOURCE LINE # 928
+0020 903005            MOV     DPTR,#03005H
+0023 7401              MOV     A,#01H
+0025 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 929
+0026 FF                MOV     R7,A
+0027 120000      R     LCALL   _PECI_CalcCRC8
+                                           ; SOURCE LINE # 930
+002A EB                MOV     A,R3
+002B C3                CLR     C
+002C 9402              SUBB    A,#02H
+002E 500A              JNC     ?C0136
+                                           ; SOURCE LINE # 931
+                                           ; SOURCE LINE # 932
+0030 EB                MOV     A,R3
+0031 24E5              ADD     A,#0E5H
+0033 FF                MOV     R7,A
+0034 903002            MOV     DPTR,#03002H
+0037 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 933
+                                           ; SOURCE LINE # 934
+0038 8007              SJMP    ?C0157
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 48  
+
+003A         ?C0136:
+                                           ; SOURCE LINE # 936
+                                           ; SOURCE LINE # 937
+003A 903002            MOV     DPTR,#03002H
+003D 74E5              MOV     A,#0E5H
+003F F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 938
+0040 FF                MOV     R7,A
+0041         ?C0157:
+0041 120000      R     LCALL   _PECI_CalcCRC8
+                                           ; SOURCE LINE # 939
+0044         ?C0137:
+                                           ; SOURCE LINE # 941
+0044 900000      R     MOV     DPTR,#Retry
+0047 E0                MOVX    A,@DPTR
+0048 FF                MOV     R7,A
+0049 C3                CLR     C
+004A 9402              SUBB    A,#02H
+004C 500A              JNC     ?C0138
+                                           ; SOURCE LINE # 942
+                                           ; SOURCE LINE # 943
+004E EF                MOV     A,R7
+004F 2402              ADD     A,#02H
+0051 FF                MOV     R7,A
+0052 903006            MOV     DPTR,#03006H
+0055 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 944
+                                           ; SOURCE LINE # 945
+0056 8007              SJMP    ?C0158
+0058         ?C0138:
+                                           ; SOURCE LINE # 947
+                                           ; SOURCE LINE # 948
+0058 903006            MOV     DPTR,#03006H
+005B 7402              MOV     A,#02H
+005D F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 949
+005E FF                MOV     R7,A
+005F         ?C0158:
+005F 120000      R     LCALL   _PECI_CalcCRC8
+                                           ; SOURCE LINE # 950
+0062         ?C0139:
+                                           ; SOURCE LINE # 952
+;---- Variable 'cunt' assigned to Register 'R3' ----
+0062 E4                CLR     A
+0063 FB                MOV     R3,A
+0064         ?C0140:
+                                           ; SOURCE LINE # 953
+                                           ; SOURCE LINE # 954
+0064 900000      R     MOV     DPTR,#PCIAddr
+                                           ; SOURCE LINE # 955
+0067 120000      R     LCALL   L?0160
+                                           ; SOURCE LINE # 956
+006A 0B                INC     R3
+006B EB                MOV     A,R3
+006C B403F5            CJNE    A,#03H,?C0140
+006F         ?C0141:
+                                           ; SOURCE LINE # 958
+006F E4                CLR     A
+0070 FB                MOV     R3,A
+0071         ?C0143:
+0071 900000      R     MOV     DPTR,#WriteLen
+0074 E0                MOVX    A,@DPTR
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 49  
+
+0075 24FA              ADD     A,#0FAH
+0077 FF                MOV     R7,A
+0078 EB                MOV     A,R3
+0079 C3                CLR     C
+007A 9F                SUBB    A,R7
+007B 5009              JNC     ?C0144
+                                           ; SOURCE LINE # 959
+                                           ; SOURCE LINE # 960
+007D 900000      R     MOV     DPTR,#WriteData
+                                           ; SOURCE LINE # 961
+0080 120000      R     LCALL   L?0160
+                                           ; SOURCE LINE # 962
+0083 0B                INC     R3
+0084 80EB              SJMP    ?C0143
+0086         ?C0144:
+                                           ; SOURCE LINE # 965
+                                           ; SOURCE LINE # 966
+                                           ; SOURCE LINE # 969
+0086 120000      R     LCALL   L?0167
+0089 EF                MOV     A,R7
+008A 6018              JZ      ?C0146
+                                           ; SOURCE LINE # 970
+                                           ; SOURCE LINE # 971
+                                           ; SOURCE LINE # 972
+008C 120000      R     LCALL   L?0165
+008F EF                MOV     A,R7
+0090 6012              JZ      ?C0146
+                                           ; SOURCE LINE # 973
+                                           ; SOURCE LINE # 974
+0092 903007            MOV     DPTR,#03007H
+0095 E0                MOVX    A,@DPTR
+0096 900000      E     MOV     DPTR,#PECI_CompletionCode
+0099 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 975
+009A E0                MOVX    A,@DPTR
+009B B44004            CJNE    A,#040H,?C0148
+                                           ; SOURCE LINE # 976
+                                           ; SOURCE LINE # 977
+009E 7C01              MOV     R4,#01H
+                                           ; SOURCE LINE # 978
+00A0 8002              SJMP    ?C0146
+00A2         ?C0148:
+                                           ; SOURCE LINE # 980
+                                           ; SOURCE LINE # 981
+00A2 E4                CLR     A
+00A3 FC                MOV     R4,A
+                                           ; SOURCE LINE # 982
+                                           ; SOURCE LINE # 983
+                                           ; SOURCE LINE # 984
+00A4         ?C0146:
+                                           ; SOURCE LINE # 986
+00A4 120000      R     LCALL   PECI_HostDisable
+                                           ; SOURCE LINE # 987
+00A7 120000      R     LCALL   ResetPECIStatus
+                                           ; SOURCE LINE # 988
+00AA AF04              MOV     R7,AR4
+                                           ; SOURCE LINE # 989
+00AC         ?C0150:
+00AC 22                RET     
+             ; FUNCTION _PECI_WrPCIConfigLocal (END)
+
+
+C51 COMPILER V7.06   CORE_PECI                                                             07/06/2010 09:59:45 PAGE 50  
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1936    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----      70
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

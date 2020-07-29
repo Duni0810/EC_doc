@@ -1,0 +1,645 @@
+C51 COMPILER V7.06   CORE_TIMERS                                                           07/06/2010 09:59:45 PAGE 1   
+
+
+C51 COMPILER V7.06, COMPILATION OF MODULE CORE_TIMERS
+OBJECT MODULE PLACED IN SOURCE\CORE_TIMERS.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\c51.exe SOURCE\CORE_TIMERS.C LA WL(1) CD OT(8,SIZE) OR
+
+stmt level    source
+
+   1          /*-----------------------------------------------------------------------------
+   2           * TITLE: CORE_TIMERS.C
+   3           *
+   4           * Copyright (c) 1983-2009, Insyde Software Corporation. All Rights Reserved.
+   5           *
+   6           * You may not reproduce, distribute, publish, display, perform, modify, adapt,
+   7           * transmit, broadcast, present, recite, release, license or otherwise exploit
+   8           * any part of this publication in any form, by any means, without the prior
+   9           * written permission of Insyde Software Corporation.
+  10           *----------------------------------------------------------------------------*/
+  11          #include "CORE_INCLUDE.H"
+  12          #include "OEM_INCLUDE.H"
+  13          
+  14          
+  15          //-----------------------------------------------------------------------------
+  16          // FUNCTION: Load_Timer_A - Load Timer A to time-out in 5 mS.
+  17          //-----------------------------------------------------------------------------
+  18          void Load_Timer_A(void)
+  19          {                       // Assume the 8051 clock source is Ring Oscillator
+  20   1          TH0 = (T_Timer_5ms)>>8;     // Reload timer
+  21   1          TL0 = (T_Timer_5ms);        // 5ms
+  22   1          TF0 = 0;
+  23   1      }
+  24          
+  25          //-----------------------------------------------------------------------------
+  26          // FUNCTION: Enable_Timer_A - Load the 5 mS timer if not already enabled.
+  27          //-----------------------------------------------------------------------------
+  28          void Enable_Timer_A(void)
+  29          {
+  30   1          Load_Timer_A();
+  31   1      }
+  32          
+  33          //-----------------------------------------------------------------------------
+  34          // FUNCTION: Stop_Timer_A - Stop the 5 mS timer.
+  35          //-----------------------------------------------------------------------------
+  36          void Stop_Timer_A(void)
+  37          {
+  38   1      
+  39   1      }
+  40          
+  41          //-----------------------------------------------------------------------------
+  42          // FUNCTION: EnableSendToHostTimer
+  43          //-----------------------------------------------------------------------------
+  44          void EnableSendToHostTimer(void)
+  45          {
+  46   1          TH1 = (T_Timer_SEND)>>8;
+  47   1          TL1 = (T_Timer_SEND);       // Reload timer
+  48   1      
+  49   1          TF1 = 0;
+  50   1          TR1 = 1;
+  51   1          ET1 = 1;
+  52   1          F_Service_SEND = 1;
+  53   1      }
+  54          
+  55          //-----------------------------------------------------------------------------
+C51 COMPILER V7.06   CORE_TIMERS                                                           07/06/2010 09:59:45 PAGE 2   
+
+  56          // FUNCTION: Load_Timer_B - Load Timer B to time-out in 150 microseconds.
+  57          //-----------------------------------------------------------------------------
+  58          void Load_Timer_B(void)
+  59          {
+  60   1          TH1 = (T_Timer_1ms)>>8;     // 1ms
+  61   1          TL1 = (T_Timer_1ms);        // Reload timer
+  62   1      
+  63   1          TF1 = 0;
+  64   1          TR1 = 1;
+  65   1      
+  66   1      }
+  67          
+  68          //-----------------------------------------------------------------------------
+  69          // FUNCTION: Stop_Timer_B - Stop the timer B.  Timer 1 is used as Timer B.
+  70          //-----------------------------------------------------------------------------
+  71          void Stop_Timer_B(void)
+  72          {
+  73   1          TR1=0;
+  74   1      
+  75   1      }
+  76          
+  77          //-----------------------------------------------------------------------------
+  78          // FUNCTION: Init_Timers
+  79          //
+  80          // Setup Timer A as a   5 millisecond timer. (Timer 0 is used as Timer A.)
+  81          // Setup Timer B as a 150 microsecond timer. (Timer 1 is used as Timer B.)
+  82          //-----------------------------------------------------------------------------
+  83          void Init_Timers(void)
+  84          {
+  85   1          TF0 = TR0 = 0;              // Stop timer 0 and clear interrupt
+  86   1          TH0 = (T_Timer_5ms)>>8;     // Reload timer
+  87   1          TL0 = (T_Timer_5ms);        // 5ms
+  88   1          TMOD  = 0x11;
+  89   1          TR0 = 1;                    // Start timer 0 running
+  90   1          ET0 = 1;
+  91   1      
+  92   1          TF1 = TR1 = 0;              // Stop timer 1 and clear interrupt
+  93   1          TH1 = (T_Timer_1ms)>>8;     // 1ms
+  94   1          TL1 = (T_Timer_1ms);        // Reload timer
+  95   1          TR1 = 1;                    // Start timer 1
+  96   1          ET1 = 1;                    // Enable timer1 interrupt
+  97   1      }
+  98          
+  99          //-----------------------------------------------------------------------------
+ 100          // FUNCTION: Microsecond_Delay - Delay a number of microseconds.
+ 101          // Input:  Code for delay.
+ 102          //-----------------------------------------------------------------------------
+ 103          void Microsecond_Delay(WORD delay)
+ 104          {
+ 105   1          do
+ 106   1          {
+ 107   2              delay--;
+ 108   2          } while (delay);
+ 109   1      
+ 110   1      }
+ 111          
+ 112          //-----------------------------------------------------------------------------
+ 113          // Delay 1ms function use timer 1
+ 114          //-----------------------------------------------------------------------------
+ 115          void vDelay1MS(WORD bMS)
+ 116          {
+ 117   1          #if DELAY_1MS_USE_WKCNR
+C51 COMPILER V7.06   CORE_TIMERS                                                           07/06/2010 09:59:45 PAGE 3   
+
+ 118   1          bit SaveEA;
+ 119   1          BYTE i;
+ 120   1      
+ 121   1          SaveEA = EA;    // save Interrupt
+ 122   1          EA = 0;         // clear global interrupt
+ 123   1      
+ 124   1          while(bMS)      // delay 1ms
+ 125   1          {
+ 126   2              for( i=0; i<66; i++ )
+ 127   2                  WNCKR = 0;  // 15.26 us
+ 128   2              bMS--;
+ 129   2          }
+ 130   1          EA = SaveEA;        // restore Interrupt
+ 131   1          #else
+                  bit SaveEA;
+                  SaveEA = EA;
+                  TR0 = 0;
+                  EA  = 0;
+                  for( ;bMS!=0; bMS-- )
+                  {
+                      TR1 = 0;
+                      TH1 = (T_Timer_1ms)>>8;
+                      TL1 = (T_Timer_1ms);
+                      TR1 = 1;
+                      TF1 = 0;
+                      while (!TF1)
+                      {
+                          if( !TR1 )
+                          {
+                              TH1 = T_Timer_1ms>>8;       // set timer1 counter 85 ms
+                              TL1 = T_Timer_1ms;          // set timer1 counter 85 ms
+                              TR1 = 1;                    // enable timer1
+                              TF1 = 0;                    // clear overflow flag
+                          }
+                      }
+                      TF1 = 0;
+                      TR1 = 0;
+                  }
+                  if( SaveEA )    EA = 1;
+                  TR0 = 1;
+                  TR1 = 1;
+                  #endif
+ 160   1      
+ 161   1      }
+ 162          
+ 163          //----------------------------------------------------------------------------
+ 164          // Delay Xms function                  
+ 165          //----------------------------------------------------------------------------
+ 166          void vDelayXms(BYTE bMS)
+ 167          {
+ 168   1              ET1 = 0;                        // Disable timer1 interrupt
+ 169   1              for (;bMS!=0;bMS--)
+ 170   1              {
+ 171   2                      TH1=(T_Timer_1ms)>>8;
+ 172   2              TL1=(T_Timer_1ms);
+ 173   2                      TR1=1;
+ 174   2              TF1=0;
+ 175   2                      while (!TF1);
+ 176   2                      TF1=0;
+ 177   2              }
+ 178   1              ET1 = 1;        
+ 179   1      }
+C51 COMPILER V7.06   CORE_TIMERS                                                           07/06/2010 09:59:45 PAGE 4   
+
+ 180          
+ 181          //-----------------------------------------------------------------------------
+ 182          // Low Level Timer 5ms Handle
+ 183          //-----------------------------------------------------------------------------
+ 184          void Service_MainLoTimer(void)
+ 185          {
+ 186   1          bit bTemp=FALSE;
+ 187   1      
+ 188   1          SMB_Check_Timer++;
+ 189   1          if( SMB_Check_Timer > 20 )
+ 190   1          {
+ 191   2              SMBusRecovery();
+ 192   2              SMB_Check_Timer = 0;
+ 193   2          }
+ 194   1      
+ 195   1          //-------------------------------------------------------------------------
+ 196   1          if( !CORE_PMFLAG_S0 )   //System Power On Flag
+ 197   1          {
+ 198   2              #if ENABLE_S5_KEYBOARD_INTR
+                      if( CORE_PMFLAG_S5 )        bTemp = TRUE;
+                      #endif
+ 201   2              #if ENABLE_S3_KEYBOARD_INTR
+ 202   2              if( CORE_PMFLAG_S3 )        bTemp = TRUE;
+ 203   2              #endif
+ 204   2              if( bTemp )
+ 205   2              {
+ 206   3                  IER1 |= 0x08;               //Enable KSI interrupt
+ 207   3                  if( Timer_A.fbit.TMR_SCAN )
+ 208   3                  {
+ 209   4                      F_Service_KEYSCAN = 1;  // Request scanner service.
+ 210   4                  }
+ 211   3              }
+ 212   2              return;
+ 213   2          }
+ 214   1          //-------------------------------------------------------------------------
+ 215   1          // CORE S0 (Host Power On)
+ 216   1          //-------------------------------------------------------------------------
+ 217   1          #if USE_SERVICE_EVENT_CENTER
+ 218   1          Service_EventCenter();
+ 219   1          #endif
+ 220   1          //-------------------------------------------------------------------------
+ 221   1          IER1 |= 0x08;               // Enable KSI interrupt
+ 222   1          //-------------------------------------------------------------------------
+ 223   1          if( Timer_A.fbit.TMR_SCAN )
+ 224   1          {
+ 225   2              F_Service_KEYSCAN = 1;  // Request scanner service.
+ 226   2          }
+ 227   1          //-------------------------------------------------------------------------
+ 228   1      
+ 229   1          if( KBPendingRXCount > 0 )
+ 230   1          {
+ 231   2              F_Service_SEND = 1;
+ 232   2          }
+ 233   1          //-------------------------------------------------------------------------
+ 234   1          if( !( Ccb42_DISAB_KEY )   )
+ 235   1          {
+ 236   2              if( (scan.kbf_head != scan.kbf_tail) )
+ 237   2              {
+ 238   3                  F_Service_SEND = 1;
+ 239   3              }
+ 240   2          }
+ 241   1      
+C51 COMPILER V7.06   CORE_TIMERS                                                           07/06/2010 09:59:45 PAGE 5   
+
+ 242   1      }
+ 243          //-----------------------------------------------------------------------------
+ 244          
+ 245          //----------------------------------------------------------------------------
+ 246          // INIT UART
+ 247          //----------------------------------------------------------------------------
+ 248          void Init_UART(void)
+ 249          {
+ 250   1      #ifdef UART_Debug
+                      GPCRB0=PALT;
+                  GPCRB1=PALT;
+                  SCON=0x40;
+                  T2CON &= 0xF0;               /* EXEN2=0; TR2=0; C/T2#=0; CP/RL2#=0; */
+                  T2CON |= 0x30;               /* RCLK = 1; TCLK=1; */
+                  T2MOD=0x00;
+                  RCAP2H=R2HV;
+                  RCAP2L=R2LV;
+                  TR2=1;
+                  TI = 1;
+              #endif    
+ 262   1      }
+ 263          
+ 264          /*-----------------------------------------------------------------------------
+ 265           * End
+ 266           *---------------------------------------------------------------------------*/
+C51 COMPILER V7.06   CORE_TIMERS                                                           07/06/2010 09:59:45 PAGE 6   
+
+ASSEMBLY LISTING OF GENERATED OBJECT CODE
+
+
+             ; FUNCTION Load_Timer_A (BEGIN)
+                                           ; SOURCE LINE # 18
+                                           ; SOURCE LINE # 19
+                                           ; SOURCE LINE # 20
+0000 758CF1            MOV     TH0,#0F1H
+                                           ; SOURCE LINE # 21
+0003 758A06            MOV     TL0,#06H
+                                           ; SOURCE LINE # 22
+0006 C28D              CLR     TF0
+                                           ; SOURCE LINE # 23
+0008 22                RET     
+             ; FUNCTION Load_Timer_A (END)
+
+             ; FUNCTION Enable_Timer_A (BEGIN)
+                                           ; SOURCE LINE # 28
+                                           ; SOURCE LINE # 29
+                                           ; SOURCE LINE # 30
+0000 020000      R     LJMP    Load_Timer_A
+             ; FUNCTION Enable_Timer_A (END)
+
+             ; FUNCTION Stop_Timer_A (BEGIN)
+                                           ; SOURCE LINE # 36
+                                           ; SOURCE LINE # 37
+                                           ; SOURCE LINE # 39
+0000 22                RET     
+             ; FUNCTION Stop_Timer_A (END)
+
+             ; FUNCTION EnableSendToHostTimer (BEGIN)
+                                           ; SOURCE LINE # 44
+                                           ; SOURCE LINE # 45
+                                           ; SOURCE LINE # 46
+0000 758DFA            MOV     TH1,#0FAH
+                                           ; SOURCE LINE # 47
+0003 758B01            MOV     TL1,#01H
+                                           ; SOURCE LINE # 49
+0006 C28F              CLR     TF1
+                                           ; SOURCE LINE # 50
+0008 D28E              SETB    TR1
+                                           ; SOURCE LINE # 51
+000A D2AB              SETB    ET1
+                                           ; SOURCE LINE # 52
+000C D200        E     SETB    F_Service_SEND
+                                           ; SOURCE LINE # 53
+000E 22                RET     
+             ; FUNCTION EnableSendToHostTimer (END)
+
+             ; FUNCTION Load_Timer_B (BEGIN)
+                                           ; SOURCE LINE # 58
+                                           ; SOURCE LINE # 59
+                                           ; SOURCE LINE # 60
+0000 758DFD            MOV     TH1,#0FDH
+                                           ; SOURCE LINE # 61
+0003 E4                CLR     A
+0004 F58B              MOV     TL1,A
+                                           ; SOURCE LINE # 63
+0006 C28F              CLR     TF1
+                                           ; SOURCE LINE # 64
+0008 D28E              SETB    TR1
+                                           ; SOURCE LINE # 66
+C51 COMPILER V7.06   CORE_TIMERS                                                           07/06/2010 09:59:45 PAGE 7   
+
+000A 22                RET     
+             ; FUNCTION Load_Timer_B (END)
+
+             ; FUNCTION Stop_Timer_B (BEGIN)
+                                           ; SOURCE LINE # 71
+                                           ; SOURCE LINE # 72
+                                           ; SOURCE LINE # 73
+0000 C28E              CLR     TR1
+                                           ; SOURCE LINE # 75
+0002 22                RET     
+             ; FUNCTION Stop_Timer_B (END)
+
+             ; FUNCTION Init_Timers (BEGIN)
+                                           ; SOURCE LINE # 83
+                                           ; SOURCE LINE # 84
+                                           ; SOURCE LINE # 85
+0000 C28C              CLR     TR0
+0002 C28D              CLR     TF0
+                                           ; SOURCE LINE # 86
+0004 758CF1            MOV     TH0,#0F1H
+                                           ; SOURCE LINE # 87
+0007 758A06            MOV     TL0,#06H
+                                           ; SOURCE LINE # 88
+000A 758911            MOV     TMOD,#011H
+                                           ; SOURCE LINE # 89
+000D D28C              SETB    TR0
+                                           ; SOURCE LINE # 90
+000F D2A9              SETB    ET0
+                                           ; SOURCE LINE # 92
+0011 C28E              CLR     TR1
+0013 C28F              CLR     TF1
+                                           ; SOURCE LINE # 93
+0015 758DFD            MOV     TH1,#0FDH
+                                           ; SOURCE LINE # 94
+0018 E4                CLR     A
+0019 F58B              MOV     TL1,A
+                                           ; SOURCE LINE # 95
+001B D28E              SETB    TR1
+                                           ; SOURCE LINE # 96
+001D D2AB              SETB    ET1
+                                           ; SOURCE LINE # 97
+001F 22                RET     
+             ; FUNCTION Init_Timers (END)
+
+             ; FUNCTION _Microsecond_Delay (BEGIN)
+                                           ; SOURCE LINE # 103
+0000 900000      R     MOV     DPTR,#delay
+0003 EE                MOV     A,R6
+0004 F0                MOVX    @DPTR,A
+0005 A3                INC     DPTR
+0006 EF                MOV     A,R7
+0007 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 104
+0008         ?C0010:
+                                           ; SOURCE LINE # 106
+                                           ; SOURCE LINE # 107
+0008 900000      R     MOV     DPTR,#delay
+000B 74FF              MOV     A,#0FFH
+000D F5F0              MOV     B,A
+000F 120000      E     LCALL   ?C?IILDX
+                                           ; SOURCE LINE # 108
+0012 900000      R     MOV     DPTR,#delay
+C51 COMPILER V7.06   CORE_TIMERS                                                           07/06/2010 09:59:45 PAGE 8   
+
+0015 E0                MOVX    A,@DPTR
+0016 7002              JNZ     ?C0035
+0018 A3                INC     DPTR
+0019 E0                MOVX    A,@DPTR
+001A         ?C0035:
+001A 70EC              JNZ     ?C0010
+                                           ; SOURCE LINE # 110
+001C 22                RET     
+             ; FUNCTION _Microsecond_Delay (END)
+
+             ; FUNCTION _vDelay1MS (BEGIN)
+                                           ; SOURCE LINE # 115
+0000 900000      R     MOV     DPTR,#bMS
+0003 EE                MOV     A,R6
+0004 F0                MOVX    @DPTR,A
+0005 A3                INC     DPTR
+0006 EF                MOV     A,R7
+0007 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 116
+                                           ; SOURCE LINE # 121
+0008 A2AF              MOV     C,EA
+000A 9200        R     MOV     SaveEA,C
+                                           ; SOURCE LINE # 122
+000C C2AF              CLR     EA
+000E         ?C0012:
+                                           ; SOURCE LINE # 124
+000E 900000      R     MOV     DPTR,#bMS
+0011 E0                MOVX    A,@DPTR
+0012 7002              JNZ     ?C0036
+0014 A3                INC     DPTR
+0015 E0                MOVX    A,@DPTR
+0016         ?C0036:
+0016 6018              JZ      ?C0013
+                                           ; SOURCE LINE # 125
+                                           ; SOURCE LINE # 126
+;---- Variable 'i' assigned to Register 'R7' ----
+0018 E4                CLR     A
+0019 FF                MOV     R7,A
+001A         ?C0014:
+                                           ; SOURCE LINE # 127
+001A 90200B            MOV     DPTR,#0200BH
+001D E4                CLR     A
+001E F0                MOVX    @DPTR,A
+001F 0F                INC     R7
+0020 EF                MOV     A,R7
+0021 B442F6            CJNE    A,#042H,?C0014
+0024         ?C0015:
+                                           ; SOURCE LINE # 128
+0024 900000      R     MOV     DPTR,#bMS
+0027 74FF              MOV     A,#0FFH
+0029 F5F0              MOV     B,A
+002B 120000      E     LCALL   ?C?IILDX
+                                           ; SOURCE LINE # 129
+002E 80DE              SJMP    ?C0012
+0030         ?C0013:
+                                           ; SOURCE LINE # 130
+0030 A200        R     MOV     C,SaveEA
+0032 92AF              MOV     EA,C
+                                           ; SOURCE LINE # 161
+0034 22                RET     
+             ; FUNCTION _vDelay1MS (END)
+
+C51 COMPILER V7.06   CORE_TIMERS                                                           07/06/2010 09:59:45 PAGE 9   
+
+             ; FUNCTION _vDelayXms (BEGIN)
+                                           ; SOURCE LINE # 166
+;---- Variable 'bMS' assigned to Register 'R7' ----
+                                           ; SOURCE LINE # 167
+                                           ; SOURCE LINE # 168
+0000 C2AB              CLR     ET1
+                                           ; SOURCE LINE # 169
+0002         ?C0018:
+0002 EF                MOV     A,R7
+0003 6012              JZ      ?C0019
+                                           ; SOURCE LINE # 170
+                                           ; SOURCE LINE # 171
+0005 758DFD            MOV     TH1,#0FDH
+                                           ; SOURCE LINE # 172
+0008 E4                CLR     A
+0009 F58B              MOV     TL1,A
+                                           ; SOURCE LINE # 173
+000B D28E              SETB    TR1
+                                           ; SOURCE LINE # 174
+000D C28F              CLR     TF1
+000F         ?C0021:
+                                           ; SOURCE LINE # 175
+000F 308FFD            JNB     TF1,?C0021
+0012         ?C0022:
+                                           ; SOURCE LINE # 176
+0012 C28F              CLR     TF1
+                                           ; SOURCE LINE # 177
+0014 1F                DEC     R7
+0015 80EB              SJMP    ?C0018
+0017         ?C0019:
+                                           ; SOURCE LINE # 178
+0017 D2AB              SETB    ET1
+                                           ; SOURCE LINE # 179
+0019 22                RET     
+             ; FUNCTION _vDelayXms (END)
+
+             ; FUNCTION Service_MainLoTimer (BEGIN)
+                                           ; SOURCE LINE # 184
+                                           ; SOURCE LINE # 185
+                                           ; SOURCE LINE # 186
+0000 C200        R     CLR     bTemp
+                                           ; SOURCE LINE # 188
+0002 0500        E     INC     SMB_Check_Timer
+                                           ; SOURCE LINE # 189
+0004 E500        E     MOV     A,SMB_Check_Timer
+0006 D3                SETB    C
+0007 9414              SUBB    A,#014H
+0009 4006              JC      ?C0024
+                                           ; SOURCE LINE # 190
+                                           ; SOURCE LINE # 191
+000B 120000      E     LCALL   SMBusRecovery
+                                           ; SOURCE LINE # 192
+000E E4                CLR     A
+000F F500        E     MOV     SMB_Check_Timer,A
+                                           ; SOURCE LINE # 193
+0011         ?C0024:
+                                           ; SOURCE LINE # 196
+0011 7800        E     MOV     R0,#LOW CORE_PMFLAG
+0013 E6                MOV     A,@R0
+0014 20E020            JB      ACC.0,?C0025
+                                           ; SOURCE LINE # 197
+                                           ; SOURCE LINE # 202
+C51 COMPILER V7.06   CORE_TIMERS                                                           07/06/2010 09:59:45 PAGE 10  
+
+0017 E6                MOV     A,@R0
+0018 13                RRC     A
+0019 13                RRC     A
+001A 543F              ANL     A,#03FH
+001C 30E002            JNB     ACC.0,?C0026
+001F D200        R     SETB    bTemp
+0021         ?C0026:
+                                           ; SOURCE LINE # 204
+0021 300046      R     JNB     bTemp,?C0029
+                                           ; SOURCE LINE # 205
+                                           ; SOURCE LINE # 206
+0024 901105            MOV     DPTR,#01105H
+0027 E0                MOVX    A,@DPTR
+0028 4408              ORL     A,#08H
+002A F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 207
+002B AF00        E     MOV     R7,Timer_A
+002D EF                MOV     A,R7
+002E C4                SWAP    A
+002F 540F              ANL     A,#0FH
+0031 30E036            JNB     ACC.0,?C0029
+                                           ; SOURCE LINE # 208
+                                           ; SOURCE LINE # 209
+0034 D200        E     SETB    F_Service_KEYSCAN
+                                           ; SOURCE LINE # 210
+                                           ; SOURCE LINE # 211
+0036 22                RET     
+                                           ; SOURCE LINE # 213
+0037         ?C0025:
+                                           ; SOURCE LINE # 218
+0037 120000      E     LCALL   Service_EventCenter
+                                           ; SOURCE LINE # 221
+003A 901105            MOV     DPTR,#01105H
+003D E0                MOVX    A,@DPTR
+003E 4408              ORL     A,#08H
+0040 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 223
+0041 AF00        E     MOV     R7,Timer_A
+0043 EF                MOV     A,R7
+0044 C4                SWAP    A
+0045 540F              ANL     A,#0FH
+0047 30E002            JNB     ACC.0,?C0030
+                                           ; SOURCE LINE # 224
+                                           ; SOURCE LINE # 225
+004A D200        E     SETB    F_Service_KEYSCAN
+                                           ; SOURCE LINE # 226
+004C         ?C0030:
+                                           ; SOURCE LINE # 229
+004C 900000      E     MOV     DPTR,#KBPendingRXCount
+004F E0                MOVX    A,@DPTR
+0050 D3                SETB    C
+0051 9400              SUBB    A,#00H
+0053 4002              JC      ?C0031
+                                           ; SOURCE LINE # 230
+                                           ; SOURCE LINE # 231
+0055 D200        E     SETB    F_Service_SEND
+                                           ; SOURCE LINE # 232
+0057         ?C0031:
+                                           ; SOURCE LINE # 234
+0057 200010      E     JB      Ccb42_DISAB_KEY,?C0029
+                                           ; SOURCE LINE # 235
+                                           ; SOURCE LINE # 236
+C51 COMPILER V7.06   CORE_TIMERS                                                           07/06/2010 09:59:45 PAGE 11  
+
+005A AF00        E     MOV     R7,scan
+005C EF                MOV     A,R7
+005D C4                SWAP    A
+005E 540F              ANL     A,#0FH
+0060 FF                MOV     R7,A
+0061 E500        E     MOV     A,scan
+0063 540F              ANL     A,#0FH
+0065 6F                XRL     A,R7
+0066 6002              JZ      ?C0029
+                                           ; SOURCE LINE # 237
+                                           ; SOURCE LINE # 238
+0068 D200        E     SETB    F_Service_SEND
+                                           ; SOURCE LINE # 239
+                                           ; SOURCE LINE # 240
+                                           ; SOURCE LINE # 242
+006A         ?C0029:
+006A 22                RET     
+             ; FUNCTION Service_MainLoTimer (END)
+
+             ; FUNCTION Init_UART (BEGIN)
+                                           ; SOURCE LINE # 248
+                                           ; SOURCE LINE # 249
+                                           ; SOURCE LINE # 262
+0000 22                RET     
+             ; FUNCTION Init_UART (END)
+
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    290    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----       4
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       2
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

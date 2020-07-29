@@ -1,0 +1,87 @@
+C51 COMPILER V7.06   OEM_BATTERY                                                           07/06/2010 09:59:46 PAGE 1   
+
+
+C51 COMPILER V7.06, COMPILATION OF MODULE OEM_BATTERY
+OBJECT MODULE PLACED IN SOURCE\OEM_BATTERY.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\c51.exe SOURCE\OEM_BATTERY.C LA WL(1) CD OT(8,SIZE) OR
+
+stmt level    source
+
+   1          /*-----------------------------------------------------------------------------
+   2           * Filename: OEM_BATTERY.C - OEM specific code
+   3           * Function: Platform battery & battery charger control code
+   4           *
+   5           * Copyright (c) 2006-2009, ITE Tech. Inc. All Rights Reserved.
+   6           *---------------------------------------------------------------------------*/
+   7          #include "CORE_INCLUDE.H"
+   8          #include "OEM_INCLUDE.H"
+   9          
+  10          /*-----------------------------------------------------------------------------
+  11           * Local Parameter Definition
+  12           *---------------------------------------------------------------------------*/
+  13          //#define   XXX     X
+  14          
+  15          
+  16          //-----------------------------------------------------------------------------
+  17          //
+  18          //-----------------------------------------------------------------------------
+  19          void CheckBatteryPlugInOut(void)
+  20          {
+  21   1          bSMBA_Dev1_OnLine = (~STATE_BATin());
+  22   1      }
+  23          
+  24          
+  25          
+  26          
+  27          
+  28          
+  29          
+  30          
+  31          
+  32          /*-----------------------------------------------------------------------------
+  33           * End
+  34           *---------------------------------------------------------------------------*/
+C51 COMPILER V7.06   OEM_BATTERY                                                           07/06/2010 09:59:46 PAGE 2   
+
+ASSEMBLY LISTING OF GENERATED OBJECT CODE
+
+
+             ; FUNCTION CheckBatteryPlugInOut (BEGIN)
+                                           ; SOURCE LINE # 19
+                                           ; SOURCE LINE # 20
+                                           ; SOURCE LINE # 21
+0000 901609            MOV     DPTR,#01609H
+0003 E0                MOVX    A,@DPTR
+0004 30E104            JNB     ACC.1,?C0001
+0007 7F01              MOV     R7,#01H
+0009 8002              SJMP    ?C0002
+000B         ?C0001:
+000B 7F00              MOV     R7,#00H
+000D         ?C0002:
+000D EF                MOV     A,R7
+000E F4                CPL     A
+000F 5401              ANL     A,#01H
+0011 FF                MOV     R7,A
+0012 900000      E     MOV     DPTR,#SMBA_DEV_STATUS
+0015 E0                MOVX    A,@DPTR
+0016 54FE              ANL     A,#0FEH
+0018 4F                ORL     A,R7
+0019 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 22
+001A 22                RET     
+             ; FUNCTION CheckBatteryPlugInOut (END)
+
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     27    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

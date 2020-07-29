@@ -1,0 +1,228 @@
+C51 COMPILER V7.06   OEM_GPIO                                                              07/06/2010 09:59:48 PAGE 1   
+
+
+C51 COMPILER V7.06, COMPILATION OF MODULE OEM_GPIO
+OBJECT MODULE PLACED IN SOURCE\OEM_GPIO.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\c51.exe SOURCE\OEM_GPIO.C LA WL(1) CD OT(8,SIZE) OR
+
+stmt level    source
+
+   1          /*-----------------------------------------------------------------------------
+   2           * TITLE: OEM_GPIO.C - MMCR (Mostly GPIO) Initialization.
+   3           *
+   4           * Copyright (c) 1983-2009, Insyde Software Corporation. All Rights Reserved.
+   5           *
+   6           * You may not reproduce, distribute, publish, display, perform, modify, adapt,
+   7           * transmit, broadcast, present, recite, release, license or otherwise exploit
+   8           * any part of this publication in any form, by any means, without the prior
+   9           * written permission of Insyde Software Corporation.
+  10           *---------------------------------------------------------------------------*/
+  11          #include "CORE_INCLUDE.H"
+  12          #include "OEM_INCLUDE.H"
+  13          
+  14          /*-----------------------------------------------------------------------------
+  15           * Local Parameter Definition
+  16           *---------------------------------------------------------------------------*/
+  17          //#define
+  18          
+  19          //-----------------------------------------------------------------------------
+  20          // External ram GPIO Registers
+  21          // Parameter: INPUT,OUTPUT,PALT,PULL_UP,PULL_DN
+  22          //-----------------------------------------------------------------------------
+  23          const sInitGPIOReg code asInitGPIOReg[] =
+  24          {
+  25              { &GCR,             0x06            },  //
+  26          
+  27              { &GPIOA,           0xF7            },  // Port A Data port Init
+  28          
+  29              { &GPIO_A0_CTRL,    OUTPUT+PULL_UP  },
+  30              { &GPIO_A1_CTRL,    INPUT           },
+  31              { &GPIO_A2_CTRL,    OUTPUT+PULL_UP  },
+  32              { &GPIO_A3_CTRL,    OUTPUT+PULL_UP  },
+  33              { &GPIO_A4_CTRL,    OUTPUT+PULL_UP  },
+  34              { &GPIO_A5_CTRL,    OUTPUT+PULL_UP  },
+  35              { &GPIO_A6_CTRL,    OUTPUT+PULL_UP  },
+  36              { &GPIO_A7_CTRL,    OUTPUT+PULL_UP  },
+  37          
+  38              { &GPIOB,           0xF8            },  // Port B Data port Init
+  39          
+  40              { &GPIO_B0_CTRL,    INPUT           },
+  41              { &GPIO_B1_CTRL,    INPUT           },
+  42              { &GPIO_B2_CTRL,    OUTPUT          },
+  43              { &GPIO_B3_CTRL,    PALT+PULL_UP    },
+  44              { &GPIO_B4_CTRL,    PALT+PULL_UP    },
+  45              { &GPIO_B5_CTRL,    OUTPUT+PULL_UP  },
+  46              { &GPIO_B6_CTRL,    OUTPUT+PULL_UP  },
+  47              { &GPIO_B7_CTRL,    OUTPUT+PULL_UP  },
+  48          
+  49              { &GPIOC,           0x00            },  // Port C Data port Init
+  50          
+  51              { &GPIO_C0_CTRL,    OUTPUT+PULL_UP  },
+  52              { &GPIO_C1_CTRL,    PALT+PULL_UP    },
+  53              { &GPIO_C2_CTRL,    PALT+PULL_UP    },
+  54              { &GPIO_C3_CTRL,    PALT+PULL_UP    },
+  55              { &GPIO_C4_CTRL,    OUTPUT+PULL_UP  },
+C51 COMPILER V7.06   OEM_GPIO                                                              07/06/2010 09:59:48 PAGE 2   
+
+  56              { &GPIO_C5_CTRL,    OUTPUT          },
+  57              { &GPIO_C6_CTRL,    INPUT+PULL_UP   },
+  58              { &GPIO_C7_CTRL,    INPUT+PULL_UP   },
+  59          
+  60              { &GPIOD,           0x5C            },  // Port D Data port Init
+  61          
+  62              { &GPIO_D0_CTRL,    INPUT           },
+  63              { &GPIO_D1_CTRL,    INPUT+PULL_UP   },
+  64              { &GPIO_D2_CTRL,    INPUT+PULL_UP   },
+  65              { &GPIO_D3_CTRL,    OUTPUT          },
+  66              { &GPIO_D4_CTRL,    OUTPUT+PULL_UP  },
+  67              { &GPIO_D5_CTRL,    INPUT+PULL_UP   },
+  68              { &GPIO_D6_CTRL,    OUTPUT+PULL_UP  },
+  69              { &GPIO_D7_CTRL,    PALT            },
+  70          
+  71              { &GPIOE,           0x04            },  // Port E Data port Init
+  72          
+  73              { &GPIO_E0_CTRL,    OUTPUT+PULL_UP  },
+  74              { &GPIO_E1_CTRL,    INPUT+PULL_DN   },
+  75              { &GPIO_E2_CTRL,    OUTPUT+PULL_UP  },
+  76              { &GPIO_E3_CTRL,    OUTPUT+PULL_UP  },
+  77              { &GPIO_E4_CTRL,    INPUT+PULL_UP   },
+  78              { &GPIO_E5_CTRL,    OUTPUT+PULL_UP  },
+  79              { &GPIO_E6_CTRL,    INPUT+PULL_DN   },
+  80              { &GPIO_E7_CTRL,    PALT            },
+  81          
+  82              { &GPIOF,           0x40            },  // Port F Data port Init
+  83          
+  84              { &GPIO_F0_CTRL,    PALT            },
+  85              { &GPIO_F1_CTRL,    PALT            },
+  86              { &GPIO_F2_CTRL,    OUTPUT+PULL_UP  },
+  87              { &GPIO_F3_CTRL,    INPUT+PULL_UP   },
+  88              { &GPIO_F4_CTRL,    INPUT           },
+  89              { &GPIO_F5_CTRL,    OUTPUT+PULL_UP  },
+  90              { &GPIO_F6_CTRL,    OUTPUT+PULL_UP  },
+  91              { &GPIO_F7_CTRL,    OUTPUT+PULL_UP  },
+  92          
+  93              { &GPIOG,           0x02            },  // Port G Data port Init
+  94          
+  95              { &GPIO_G0_CTRL,    PALT            },
+  96              { &GPIO_G1_CTRL,    OUTPUT+PULL_UP  },
+  97              { &GPIO_G2_CTRL,    INPUT           },
+  98              { &GPIO_G3_CTRL,    PALT            },
+  99              { &GPIO_G4_CTRL,    PALT            },
+ 100              { &GPIO_G5_CTRL,    PALT            },
+ 101              { &GPIO_G6_CTRL,    INPUT           },
+ 102              { &GPIO_G7_CTRL,    PALT            },
+ 103          
+ 104              { &GPIOH,           0x01            },  // Port H Data port Init
+ 105          
+ 106              { &GPIO_H0_CTRL,    OUTPUT+PULL_UP  },
+ 107              { &GPIO_H1_CTRL,    INPUT+PULL_DN   },
+ 108              { &GPIO_H2_CTRL,    OUTPUT+PULL_UP  },
+ 109              { &GPIO_H3_CTRL,    OUTPUT+PULL_UP  },
+ 110              { &GPIO_H4_CTRL,    INPUT+PULL_DN   },
+ 111              { &GPIO_H5_CTRL,    INPUT+PULL_DN   },
+ 112              { &GPIO_H6_CTRL,    OUTPUT+PULL_UP  },
+ 113              { &GPIO_H7_CTRL,    PALT            },
+ 114          
+ 115              { &GPIOI,           0x30            },  // Port I Data port Init
+ 116          
+ 117              { &GPIO_I0_CTRL,    INPUT           },
+C51 COMPILER V7.06   OEM_GPIO                                                              07/06/2010 09:59:48 PAGE 3   
+
+ 118              { &GPIO_I1_CTRL,    INPUT           },
+ 119              { &GPIO_I2_CTRL,    INPUT           },
+ 120              { &GPIO_I3_CTRL,    INPUT           },
+ 121              { &GPIO_I4_CTRL,    INPUT           },
+ 122              { &GPIO_I5_CTRL,    INPUT           },
+ 123              { &GPIO_I6_CTRL,    INPUT           },
+ 124              { &GPIO_I7_CTRL,    INPUT           },
+ 125          
+ 126              { &GPIOJ,           0x00            },  // Port J Data port Init
+ 127          
+ 128              { &GPIO_J0_CTRL,    INPUT           },
+ 129              { &GPIO_J1_CTRL,    PALT            },
+ 130              { &GPIO_J2_CTRL,    PALT            },
+ 131              { &GPIO_J3_CTRL,    PALT            },
+ 132              { &GPIO_J4_CTRL,    INPUT           },
+ 133              { &GPIO_J5_CTRL,    INPUT           }
+ 134          
+ 135          };
+ 136          
+ 137          //-----------------------------------------------------------------------------
+ 138          // The function of GPIO register init.
+ 139          //-----------------------------------------------------------------------------
+ 140          void Init_GPIO(void)
+ 141          {
+ 142   1          BYTE iTemp;
+ 143   1          iTemp = 0x00;
+ 144   1          while( iTemp<(sizeof(asInitGPIOReg)/3) )
+ 145   1          {
+ 146   2              *asInitGPIOReg[iTemp].reg=asInitGPIOReg[iTemp].value;
+ 147   2              iTemp++;
+ 148   2          }
+ 149   1      
+ 150   1      }
+ 151          //-----------------------------------------------------------------------------
+ 152          
+ 153          /*-----------------------------------------------------------------------------
+ 154           * End
+ 155           *---------------------------------------------------------------------------*/
+C51 COMPILER V7.06   OEM_GPIO                                                              07/06/2010 09:59:48 PAGE 4   
+
+ASSEMBLY LISTING OF GENERATED OBJECT CODE
+
+
+             ; FUNCTION Init_GPIO (BEGIN)
+                                           ; SOURCE LINE # 140
+                                           ; SOURCE LINE # 141
+                                           ; SOURCE LINE # 143
+;---- Variable 'iTemp' assigned to Register 'R7' ----
+0000 E4                CLR     A
+0001 FF                MOV     R7,A
+0002         ?C0001:
+                                           ; SOURCE LINE # 144
+                                           ; SOURCE LINE # 145
+                                           ; SOURCE LINE # 146
+0002 75F003            MOV     B,#03H
+0005 EF                MOV     A,R7
+0006 900000      R     MOV     DPTR,#asInitGPIOReg+02H
+0009 120000      E     LCALL   ?C?OFFXADD
+000C E4                CLR     A
+000D 93                MOVC    A,@A+DPTR
+000E FE                MOV     R6,A
+000F 75F003            MOV     B,#03H
+0012 EF                MOV     A,R7
+0013 900000      R     MOV     DPTR,#asInitGPIOReg
+0016 120000      E     LCALL   ?C?OFFXADD
+0019 E4                CLR     A
+001A 93                MOVC    A,@A+DPTR
+001B FC                MOV     R4,A
+001C 7401              MOV     A,#01H
+001E 93                MOVC    A,@A+DPTR
+001F F582              MOV     DPL,A
+0021 8C83              MOV     DPH,R4
+0023 EE                MOV     A,R6
+0024 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 147
+0025 0F                INC     R7
+                                           ; SOURCE LINE # 148
+0026 EF                MOV     A,R7
+0027 B459D8            CJNE    A,#059H,?C0001
+                                           ; SOURCE LINE # 150
+002A         ?C0003:
+002A 22                RET     
+             ; FUNCTION Init_GPIO (END)
+
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     43    ----
+   CONSTANT SIZE    =    267    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

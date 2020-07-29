@@ -1,0 +1,1211 @@
+C51 COMPILER V7.06   OEM_MAIN                                                              07/06/2010 09:59:49 PAGE 1   
+
+
+C51 COMPILER V7.06, COMPILATION OF MODULE OEM_MAIN
+OBJECT MODULE PLACED IN SOURCE\OEM_MAIN.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\c51.exe SOURCE\OEM_MAIN.C LA WL(1) CD OT(8,SIZE) OR
+
+stmt level    source
+
+   1          /*-----------------------------------------------------------------------------
+   2           * Filename: OEM_MAIN.C - OEM specific code
+   3           * Function: OEM Hook from Kernel, Usually is timer handle
+   4           *
+   5           * Copyright (c) 2006-2009, ITE Tech. Inc. All Rights Reserved.
+   6           *---------------------------------------------------------------------------*/
+   7          #include "CORE_INCLUDE.H"
+   8          #include "OEM_INCLUDE.H"
+   9          
+  10          /*-----------------------------------------------------------------------------
+  11           * Local Parameter Definition
+  12           *---------------------------------------------------------------------------*/
+  13          #define SUPPORT_GET_FAN1_RPM            1
+  14          #define SUPPORT_GET_FAN2_RPM            0
+  15          
+  16          //-----------------------------------------------------------------------------
+  17          // Oem 5ms Events/Hook Here
+  18          //-----------------------------------------------------------------------------
+  19          void Hook_Timer5msEvent(void)
+  20          {
+  21   1          Oem_SysPowerContrl();   //OEM_POWER.C: Oem Handle System Power Control
+  22   1          HandleSMBusData();
+  23   1      
+  24   1          #if USE_SMBUS_CHANNEL_A
+  25   1          SMBusA_Scan_Center();
+  26   1          #endif
+  27   1      
+  28   1          #if USE_SMBUS_CHANNEL_B
+  29   1          SMBusB_Scan_Center();
+  30   1          #endif
+  31   1      
+  32   1          #if USE_SMBUS_CHANNEL_C
+                  SMBusC_Scan_Center();
+                  #endif
+  35   1      
+  36   1          #if USE_SMBUS_CHANNEL_D
+                  SMBusD_Scan_Center();
+                  #endif
+  39   1      
+  40   1      }
+  41          
+  42          //-----------------------------------------------------------------------------
+  43          // Oem 10ms Events/Hook Here
+  44          //-----------------------------------------------------------------------------
+  45          void Hook_Timer10msEvent(void)
+  46          {
+  47   1          CoreAutoScanADC();
+  48   1      
+  49   1      }
+  50          
+  51          //-----------------------------------------------------------------------------
+  52          // Oem 50ms Events/Hook Here
+  53          //-----------------------------------------------------------------------------
+  54          void Hook_Timer50msEventA(void)
+  55          {
+C51 COMPILER V7.06   OEM_MAIN                                                              07/06/2010 09:59:49 PAGE 2   
+
+  56   1      
+  57   1      }
+  58          
+  59          //-----------------------------------------------------------------------------
+  60          void Hook_Timer50msEventB(void)
+  61          {
+  62   1      
+  63   1      }
+  64          
+  65          //-----------------------------------------------------------------------------
+  66          void Hook_Timer50msEventC(void)
+  67          {
+  68   1          CheckBatteryPlugInOut();
+  69   1      }
+  70          
+  71          //-----------------------------------------------------------------------------
+  72          // Oem 100ms Events/Hook Here
+  73          //-----------------------------------------------------------------------------
+  74          void Hook_Timer100msEventA(void)
+  75          {
+  76   1      
+  77   1      
+  78   1      }
+  79          //-----------------------------------------------------------------------------
+  80          void Hook_Timer100msEventB(void)
+  81          {
+  82   1      
+  83   1      
+  84   1      }
+  85          //-----------------------------------------------------------------------------
+  86          void Hook_Timer100msEventC(void)
+  87          {
+  88   1          //Service_LED_Indicator();
+  89   1      
+  90   1      }
+  91          //-----------------------------------------------------------------------------
+  92          // Oem 125ms Events/Hook Here
+  93          //-----------------------------------------------------------------------------
+  94          void Hook_Timer125msEvent(void)
+  95          {
+  96   1      
+  97   1      }
+  98          //-----------------------------------------------------------------------------
+  99          // Oem 250ms Events/Hook Here
+ 100          //-----------------------------------------------------------------------------
+ 101          void Hook_Timer250msEvent(void)
+ 102          {
+ 103   1      
+ 104   1      }
+ 105          //-----------------------------------------------------------------------------
+ 106          // Oem 500ms Events/Hook Here
+ 107          //-----------------------------------------------------------------------------
+ 108          void Hook_Timer500msEventA(void)
+ 109          {
+ 110   1          Service_LED_Indicator();
+ 111   1      
+ 112   1      }
+ 113          //-----------------------------------------------------------------------------
+ 114          void Hook_Timer500msEventB(void)
+ 115          {
+ 116   1      
+ 117   1      }
+C51 COMPILER V7.06   OEM_MAIN                                                              07/06/2010 09:59:49 PAGE 3   
+
+ 118          //-----------------------------------------------------------------------------
+ 119          void Hook_Timer500msEventC(void)
+ 120          {
+ 121   1      
+ 122   1      }
+ 123          //-----------------------------------------------------------------------------
+ 124          // Oem 1sec Events/Hook Here
+ 125          //-----------------------------------------------------------------------------
+ 126          void Hook_Timer1SecEventA(void)
+ 127          {
+ 128   1          #if SUPPORT_GET_FAN1_RPM
+ 129   1          if( (GPIO_D6_CTRL&0xC0) == PALT)
+ 130   1          {
+ 131   2              Fan1RPM = GetFanRPM(PWM_F1TMRR,PWM_F1TLRR);
+ 132   2          }
+ 133   1          #endif
+ 134   1      }
+ 135          //-----------------------------------------------------------------------------
+ 136          void Hook_Timer1SecEventB(void)
+ 137          {
+ 138   1      
+ 139   1          #if SUPPORT_GET_FAN2_RPM
+                  if( (GPIO_D7_CTRL&0xC0) == PALT)
+                  {
+                    Fan2RPM=GetFanRPM(PWM_F2TMRR,PWM_F2TLRR);
+                  }
+                  #endif
+ 145   1      }
+ 146          //-----------------------------------------------------------------------------
+ 147          void Hook_Timer1SecEventC(void)
+ 148          {
+ 149   1          Oem_ColdBootTester();   // OEM_POWER.C: Auto-Cold Boot Tester
+ 150   1      
+ 151   1      }
+ 152          
+ 153          //-----------------------------------------------------------------------------
+ 154          // 1 min events
+ 155          //-----------------------------------------------------------------------------
+ 156          void Hook_Timer1MinEvent(void)
+ 157          {
+ 158   1          ;
+ 159   1      }
+ 160          
+ 161          //-----------------------------------------------------------------------------
+ 162          // End of Handle Timer Events
+ 163          //-----------------------------------------------------------------------------
+ 164          
+ 165          //-----------------------------------------------------------------------------
+ 166          // FUNCTION: Service_OEM_LoTimer (Low Level 5ms handle)
+ 167          //
+ 168          //-----------------------------------------------------------------------------
+ 169          void Service_OEM_LoTimer(void)
+ 170          {
+ 171   1          ;
+ 172   1      }
+ 173          
+ 174          //-----------------------------------------------------------------------------
+ 175          // FUNCTION: Service_WaitPS2_Handle
+ 176          //
+ 177          //-----------------------------------------------------------------------------
+ 178          void Service_WaitPS2_Handle(void)
+ 179          {
+C51 COMPILER V7.06   OEM_MAIN                                                              07/06/2010 09:59:49 PAGE 4   
+
+ 180   1      }
+ 181          
+ 182          //-----------------------------------------------------------------------------
+ 183          // FUNCTION: OemSetWakeUpSource
+ 184          //           TRUE:  Set WakeUp and enable sleep
+ 185          //           FALSE: Skip(Disable) sleep.
+ 186          //-----------------------------------------------------------------------------
+ 187          bit OemSetWakeUpSource(void)
+ 188          {
+ 189   1          IER0 |= 0x00;
+ 190   1          IER2 |= 0x02;   // LPCRST
+ 191   1          IER3 |= 0x01;   // KBC_IBF
+ 192   1          //-------------------------------------------------------------------------
+ 193   1          if( CORE_PMFLAG_S0 )
+ 194   1          {
+ 195   2              IER1  = 0x08;   // KBS interrupt
+ 196   2          }
+ 197   1          else
+ 198   1          {
+ 199   2              IER1 |= 0x88;   // CIR, KBS interrupt
+ 200   2          }
+ 201   1          //-------------------------------------------------------------------------
+ 202   1          //-------------------------------------------------------------------------
+ 203   1          return TRUE;
+ 204   1          //-------------------------------------------------------------------------
+ 205   1      }
+ 206          //-----------------------------------------------------------------------------
+ 207          
+ 208          /* ----------------------------------------------------------------------------
+ 209           * FUNCTION: vCheckChipCanDeepSleep
+ 210           *           TRUE: Allow enter Deep Sleep / FALSE: skip entry
+ 211           * ------------------------------------------------------------------------- */
+ 212          bit vCheckChipCanDeepSleep(void)
+ 213          {
+ 214   1          //if( IS_ADAPTER_IN() || IF_VIA_SUS_ON()
+ 215   1          //  ||  (STATE_PowerSW() == PowerSW_Active) )
+ 216   1          {   // Skip Deep-Sleep if Adapter On-Line
+ 217   2              DeepSleepCountDown = 5;     //5 sec Deep-Sleep timer
+ 218   2              return  FALSE;
+ 219   2          }
+ 220   1          //-------------------------------------------------------------------------
+ 221   1          if( DeepSleepCountDown > 0 || !CORE_PMFLAG_S5 )
+ 222   1          {
+ 223   2              return  FALSE;
+ 224   2          }
+ 225   1          //-------------------------------------------------------------------------
+ 226   1          return  TRUE;
+ 227   1      }
+ 228          //-----------------------------------------------------------------------------
+ 229          
+ 230          //-----------------------------------------------------------------------------
+ 231          // FUNCTION: InitEnterDeepSleep
+ 232          //
+ 233          //-----------------------------------------------------------------------------
+ 234          const sInitGPIOReg code InitEnterDeepReg[] =
+ 235          {
+ 236              { &ADCCFG,          0x00    },
+ 237              { &DACPDREG,        0x3F    },
+ 238              { &PWM_ZTIER,       0x00    },
+ 239              { &KSOL,            0x00    },
+ 240              { &KSOH1,           0x00    },
+ 241              { &KSICTRL,         0x00    },
+C51 COMPILER V7.06   OEM_MAIN                                                              07/06/2010 09:59:49 PAGE 5   
+
+ 242              { &GPIO_I0_CTRL,    INPUT   },
+ 243              //Wake-Up GPIO Config.
+ 244              { &GPIO_D0_CTRL,    PALT+PULL_UP    },  //Enable WU22(WUI2) (INT21)-> AC IN
+ 245              { &GPIO_E4_CTRL,    PALT+PULL_UP    },  //Enable WU25(PWRSW)(INT14)-> PWRSW
+ 246              //Wake-Up Edge Mode Register Setting
+ 247              { &WUEMR2,          0x21    },  //Bit5:WU25(PWRSW) Bit0:AC_IN Low Active
+ 248              //Wake-Up Sense Register Clear
+ 249              { &WUESR1,          0xFF    },
+ 250              { &WUESR2,          0xFF    },
+ 251              { &WUESR3,          0xFF    },
+ 252              { &WUESR4,          0xFF    },
+ 253              { &WUESR6,          0xFF    },
+ 254              //Wake-Up Enable Register Setting
+ 255              { &WUENR2,          0x21    },      //Bit5:WU25(PWRSW) Bit1:WU21(LID) Bit0:WU20(ACIN)
+ 256              //Interrupt Polarity Register Setting
+ 257              { &IPOLR0,          0x00    },
+ 258              { &IPOLR1,          0x00    },
+ 259              //Interrupt Status Register Clear
+ 260              { &ISR0,            0xFF    },
+ 261              { &ISR1,            0xFF    },
+ 262              { &ISR2,            0xFF    },
+ 263              { &ISR3,            0xFF    },
+ 264              //Interrupt Enable Register Setting
+ 265              { &IER0,            0x02    },  //Bit5:INT5/WKINTAD Bit1:INT1(AC_IN)
+ 266              { &IER1,            0x40    },  //Bit7:CIR Interrupt Bit6:INT14 (PWRSW)
+ 267              { &IER2,            0x20    },
+ 268              { &IER3,            0x00    },
+ 269          };
+ 270          //-----------------------------------------------------------------------------
+ 271          void InitEnterDeepSleep(void)
+ 272          {
+ 273   1          BYTE iTemp;
+ 274   1      
+ 275   1          #if SUPPORT_EC_WDT_RESET
+                  EWDCNTLR = T_WDTMR_SLEEP;       // Watch Dog Timeout Values(sec)
+                  #endif  //SUPPORT_EC_WDT_RESET
+ 278   1          //#if SUPPORT_CIR_DEVICE
+ 279   1          //Init_CIR();
+ 280   1          //#endif
+ 281   1      
+ 282   1          iTemp = 0x00;
+ 283   1          while( iTemp<(sizeof(InitEnterDeepReg)/3) )
+ 284   1          {
+ 285   2              *InitEnterDeepReg[iTemp].reg=InitEnterDeepReg[iTemp].value;
+ 286   2              iTemp++;
+ 287   2          }
+ 288   1      }
+ 289          //-----------------------------------------------------------------------------
+ 290          
+ 291          //-----------------------------------------------------------------------------
+ 292          // FUNCTION: InitWakeFromDeepSleep
+ 293          //
+ 294          //-----------------------------------------------------------------------------
+ 295          const sInitGPIOReg code InitWakeUpDeepReg[] =
+ 296          {
+ 297              { &DeepSleepCountDown,  0x05            },
+ 298              { &KSICTRL,             0x04            },
+ 299              { &ADCCFG,              (BIT0 + BIT5)   },
+ 300              { &DACPDREG,            0x00            },
+ 301              { &PWM_ZTIER,           0x02            },
+ 302              //GPIO Config.
+ 303              { &GPIO_I0_CTRL,        PALT            },
+C51 COMPILER V7.06   OEM_MAIN                                                              07/06/2010 09:59:49 PAGE 6   
+
+ 304              //Wake-Up GPIO Config.
+ 305              { &GPIO_D0_CTRL,        INPUT+PULL_UP   },  //WU20(WUI0) (INT1) -> AC_IN
+ 306              { &GPIO_E4_CTRL,        INPUT+PULL_UP   },  //SWU25(PWRSW)(INT14)-> PWR SW
+ 307              //Wake-Up Enable Register Setting
+ 308              { &IER0,                0x00            },
+ 309              { &IER1,                0x00            },
+ 310              { &IER2,                0x00            },
+ 311              //Interrupt Status Register Clear
+ 312              { &ISR0,                0xFF            },
+ 313              { &ISR1,                0xFF            },
+ 314              { &ISR2,                0xFF            },
+ 315              { &ISR3,                0xFF            },
+ 316          
+ 317          };
+ 318          //-----------------------------------------------------------------------------
+ 319          void InitWakeFromDeepSleep(void)
+ 320          {
+ 321   1          BYTE iTemp;
+ 322   1      
+ 323   1          iTemp = 0x00;
+ 324   1          while( iTemp<(sizeof(InitWakeUpDeepReg)/3) )
+ 325   1          {
+ 326   2              *InitWakeUpDeepReg[iTemp].reg=InitWakeUpDeepReg[iTemp].value;
+ 327   2              iTemp++;
+ 328   2          }
+ 329   1          #if SUPPORT_CIR_DEVICE
+                  Init_CIR();
+                  #endif
+ 332   1          /*
+ 333   1          if( (STATE_PowerSW() == PowerSW_Active) && (IF_LID_SW_OPEN()) )
+ 334   1          {
+ 335   1              if( CheckBatteryCanBoot() )
+ 336   1              {
+ 337   1                  Oem_TriggerPowerOn();
+ 338   1              }
+ 339   1          }
+ 340   1          */
+ 341   1      }
+ 342          //-----------------------------------------------------------------------------
+ 343          
+ 344          //-----------------------------------------------------------------------------
+ 345          // FUNCTION: Service_LPCRST
+ 346          //           ISR for INT17 WUC Interrupt WUI4 for LPCRST Process
+ 347          //-----------------------------------------------------------------------------
+ 348          void Service_LPCRST(void)
+ 349          {
+ 350   1          GATEA20_ON();
+ 351   1          OS_ACPI_Mode = 0;
+ 352   1          Ccb42 = 0x38;
+ 353   1      }
+ 354          //-----------------------------------------------------------------------------
+ 355          
+ 356          //-----------------------------------------------------------------------------
+ 357          // End of Service
+ 358          //-----------------------------------------------------------------------------
+ 359          
+ 360          //-----------------------------------------------------------------------------
+ 361          // Oem Cold Reset Initialize
+ 362          //-----------------------------------------------------------------------------
+ 363          
+ 364          //-----------------------------------------------------------------------------
+ 365          #if (OEM_InitSIO_Table)  /*<------<< PROJECT.H */
+C51 COMPILER V7.06   OEM_MAIN                                                              07/06/2010 09:59:49 PAGE 7   
+
+              //-----------------------------------------------------------------------------
+              const BYTE code initsio_table[]=
+              {
+                  /* Configure and Enable Logical Device 06h(KBC) */
+                  0x07 ,0x06,     // Select Logical Device 06h(KBC)
+                  0x70 ,0x01,     // Set IRQ=01h for Logical Device 06h(KBC)
+                  0x30 ,0x01,     // Enable Logical Device 06h(KBC)
+                  /* Configure and Enable Logical Device 05h(Mouse) */
+                  0x07 ,0x05,     // Select Logical Device 05h(Mouse)
+                  0x70 ,0x0C,     // Set IRQ=0Ch for Logical Device 05h(Mouse)
+                  0x30 ,0x01,     // Enable Logical Device 05h(Mouse)
+                  /* Enable Logical Device 11h(PM1) */
+                  0x07 ,0x11,     // Select Logical Device 11h(PM1)
+                  0x70 ,0x00,     // Clear IRQ=0 for  Logical Device 11h(PM1)
+                  0x30 ,0x01,     // Enable Logical Device 11h(PM1)
+                  /* Enable Logical Device 12h(PM2) */
+                  0x07 ,0x12, // Select Logical Device 12h(PM2)
+                  0x70 ,0x00, // Clear IRQ=0 for  Logical Device 12h(PM2)
+                  0x30 ,0x01, // Enable Logical Device 12h(PM2)
+                  /* Enable Logical Device 04h(MSWC) */
+                  0x07 ,0x04, // Logical Device 04h(MSWC)
+                  0x30 ,0x01, // Enable MSWC
+                  /* Enable Logical Device 0Ah(CIR) */
+              #if SUPPORT_CIR_DEVICE
+                      0x07 ,0x0A, // Enable Logical Device 0Ah(CIR)
+                      0x60 ,0x03, // IO Port 300              
+                      0x61 ,0x00, //
+                      0x70 ,0x0A, // IRQ=10 for  CIR
+                      0x30 ,0x01, // Enable CIR
+              #endif
+                  /* Enable Logical Device 10h(BRAM) */
+                  0x07, 0x10,     // Logical Device 10h(BRAM)
+                  0x60, 0x09,     // I/O Base Address 912h
+                  0x61, 0x12,     // I/O Base Address 913h
+                  0x62, 0x09,     // I/O Base Address 910h
+                  0x63, 0x10,     // I/O Base Address 911h
+                  0x70, 0x00,     // Set Without IRQ
+                  0x30, 0x01,     // Enable BRAM(MailBox)
+                  /* Enable Logical Device 0Fh(Shared Memory) */
+                  0x07 ,0x0F, // Logical Device 0Fh(Shared Memory)
+                  0x30 ,0x01, // MSWC Shared Memory
+                  0xF4 ,0x09, // MSWC Shared Memory
+              
+              };
+              //----------------------------------------------------------------------------
+              // Init super IO function
+              //----------------------------------------------------------------------------
+              void InitSio(void)
+              {
+                  BYTE code *data_pntr;
+                  BYTE cnt;
+              
+                  SET_BIT( LSIOHA, 0 );
+                  SET_BIT( IBMAE,  0 );
+                  SET_BIT( IBCTL,  0 );
+              
+                  cnt=0;
+                  data_pntr = initsio_table;
+                  while( cnt < (sizeof(initsio_table)/2) )
+                  {
+                      IHIOA=0;              // Set indirect Host I/O Address
+                      IHD=*data_pntr;
+C51 COMPILER V7.06   OEM_MAIN                                                              07/06/2010 09:59:49 PAGE 8   
+
+                      while( IS_BIT_SET(IBCTL,2) );
+                      data_pntr ++;
+              
+                      IHIOA=1;              // Set indirect Host I/O Address
+                      IHD=*data_pntr;
+                      while( IS_BIT_SET(IBCTL,2) );
+                      data_pntr ++;
+                      cnt ++;
+                  }
+              
+                  CLEAR_BIT( LSIOHA, 0 );
+                  CLEAR_BIT( IBMAE,  0 );
+                  CLEAR_BIT( IBCTL,  0 );
+              
+              }
+              //-----------------------------------------------------------------------------
+              #endif      /*<------<< PROJECT.H */
+ 445          //-----------------------------------------------------------------------------
+ 446          
+ 447          
+ 448          //-----------------------------------------------------------------------------
+ 449          // Oem Cold Reset Initialize
+ 450          //-----------------------------------------------------------------------------
+ 451          // The function of init. registers
+ 452          //-----------------------------------------------------------------------------
+ 453          const struct REG_INIT_DEF code oem_reg_init_table[] =
+ 454          {
+ 455              //SWUC
+ 456              { &SPCTRL1,     _Init_I2EC      },  // Enable I2EC R/W
+ 457              { &BADRSEL,     _Init_BADR      },
+ 458              { &SWCBALR,     _Init_SWCBALR   },
+ 459              { &SWCBAHR,     _Init_SWCBAHR   },
+ 460              // PWM
+ 461              { &PWM_ZTIER,       0x00    },
+ 462              { &PWM_CTR,         0xFF    },
+ 463              { &PWM_PCFSR,       0x43    },
+ 464              { &PWM_C0CPRS,      0x0F    },  // EC_PWM_2 34KHz
+ 465              { &PWM_C4CPRS,      0xAF    },  // INVERTER 200Hz(B2)
+ 466              { &PWM_C6CPRS,      0x7F    },
+ 467              { &PWM_C7CPRS,      0x01    },
+ 468              { &PWM_PCSSGL,      0x00    },
+ 469              { &PWM_PCSSGH,      0x04    },  // Set CH_GROUP 4
+ 470              { &PWM_ZTIER,       0x02    },
+ 471              // ETWD - External Timer & External Watchdog
+ 472              { &ET1PSR,          0x00    },  // 32.768K
+ 473              { &ET1CNTLHR,       0x80    },  // 32768 for 1sec counter
+ 474              { &ET1CNTLLR,       0x00    },
+ 475              // ECPM - EC Clock & Power Management controller
+ 476              { &CGCTRL1R,        0x00    },  // Enabled ADC, ADC clock.
+ 477              { &CGCTRL2R,        0x80    },  // TMKBC clock gating
+ 478              // Keyboard Matrix
+ 479              { &KSOCTRL,         BIT0+BIT2   },
+ 480          
+ 481          };
+ 482          //-----------------------------------------------------------------------------
+ 483          const struct REG_INIT_DEF code SMBus_REG_init_table[] =
+ 484          {
+ 485              //SMBus
+ 486              { &SMB_4P7USL,      0x2F    },  // 50K:02Fh,80K:02Fh,100K:02Fh
+ 487              { &SMB_4P0USH,      0x5A    },  // 50K:05Ah,80K:028h,100K:028H
+ 488              { &SMB_300NSREG,    0x03    },  // 50K:003h 80K:003h,100K:003h
+ 489              { &SMB_250NSREG,    0x30    },  // 50K:030h 80K:020h,100K:003h
+C51 COMPILER V7.06   OEM_MAIN                                                              07/06/2010 09:59:49 PAGE 9   
+
+ 490              { &SMB_25MSREG,     0x19    },  // 50K:019h 80K:019h,100K:005h
+ 491              { &SMB_45P3USLREG,  0xC5    },  // 50K:0C5h 80K:0C5h,100K:0C5h
+ 492              { &SMB_45P3USHREG,  0x01    },  // 50K:001h 80K:001h,100K:001h
+ 493              //SMBUS-A
+ 494              { &HOCTL2_A,        0x01    },
+ 495              { &RESLADR_A,       0x08    },
+ 496              { &HOCTL_A,         0x03    },
+ 497              { &HOCTL_A,         0x01    },
+ 498              { &HOSTA_A,         0xFF    },
+ 499              { &SICR_A,          0x01    },
+ 500              { &SLSTA_A,         0xFF    },
+ 501              //SMBUS-B
+ 502              { &HOCTL2_B,        0x01    },
+ 503              { &RESLADR_B,       0x08    },
+ 504              { &HOCTL_B,         0x03    },
+ 505              { &HOCTL_B,         0x01    },
+ 506              { &HOSTA_B,         0xFF    },
+ 507              { &SICR_B,          0x01    },
+ 508              { &SLSTA_B ,        0xFF    },
+ 509              //SMBUS-C
+ 510              { &HOCTL2_C,        0x01    },
+ 511              { &HOCTL_C,         0x03    },
+ 512              { &HOCTL_C,         0x01    },
+ 513              { &HOSTA_C,         0xFF    },
+ 514          
+ 515          };
+ 516          //-----------------------------------------------------------------------------
+ 517          // Oem Init SMBus Register
+ 518          //-----------------------------------------------------------------------------
+ 519          void OEM_Init_SMBus(void)
+ 520          {
+ 521   1          BYTE index = 0x00;
+ 522   1          while( index < (sizeof(SMBus_REG_init_table)/3) )
+ 523   1          {
+ 524   2              Tmp_XPntr  = SMBus_REG_init_table[index].address;
+ 525   2              *Tmp_XPntr = SMBus_REG_init_table[index].initdata;
+ 526   2              index++;
+ 527   2          }
+ 528   1          //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ 529   1          #if EN_S5_SMBUS_CHANNEL_A
+ 530   1          GPIO_B3_CTRL = PALT;
+ 531   1          GPIO_B4_CTRL = PALT;
+ 532   1          #endif
+ 533   1          #if EN_S5_SMBUS_CHANNEL_B
+ 534   1          GPIO_C1_CTRL = PALT;
+ 535   1          GPIO_C2_CTRL = PALT;
+ 536   1          #endif
+ 537   1          #if EN_S5_SMBUS_CHANNEL_C
+                  GPIO_F6_CTRL = PALT;
+                  GPIO_F7_CTRL = PALT;
+                  #endif
+ 541   1          //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ 542   1      
+ 543   1      }
+ 544          //-----------------------------------------------------------------------------
+ 545          void OEM_ColdResetInit(void)
+ 546          {
+ 547   1          BYTE index  = 0x00;
+ 548   1          //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ 549   1          #if SUPPORT_EC_WDT_RESET
+                  ETPSR = 0x00;       // SELECT 32.768Khz
+                  ETCNTLHR = 0x80;    // Set 1Sec Count
+C51 COMPILER V7.06   OEM_MAIN                                                              07/06/2010 09:59:49 PAGE 10  
+
+                  ETCNTLLR = 0x00;    // Set 1Sec Count
+                  EWDCNTLR = T_WDTMR_COLD;    // Watch Dog Timeout Values(sec)
+                  ETWCFG   = 0x27;    //LOCK WATCHDOG REGISTER
+                  #endif  //SUPPORT_EC_WDT_RESET
+ 556   1          //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ 557   1          Oem_CodeVer = EC_OEM_VER;
+ 558   1          //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ 559   1          #if SUPPORT_CIR_DEVICE
+                  Init_CIR();
+                  #endif
+ 562   1          while( index < (sizeof(oem_reg_init_table)/3) )
+ 563   1          {
+ 564   2              Tmp_XPntr  = oem_reg_init_table[index].address;
+ 565   2              *Tmp_XPntr = oem_reg_init_table[index].initdata;
+ 566   2              index++;
+ 567   2          }
+ 568   1          //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ 569   1          OEM_Init_SMBus();
+ 570   1          //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ 571   1          SET_BIT( IELMR2, 1 );   //LPCRST
+ 572   1          SET_BIT( IPOLR2, 1 );   //LPCRST
+ 573   1          EX1   = 1;
+ 574   1          IER2 |= 0x02;           //LPCRST
+ 575   1          IER1 |= 0x08;
+ 576   1          VCH0CTL = 0x80;
+ 577   1          VCH1CTL = 0x81;
+ 578   1          VCH2CTL = 0x82;
+ 579   1          VCH3CTL = 0x83;
+ 580   1          Oem_SysOffInit();
+ 581   1          // Don't clear 225F-227F for Power Log.
+ 582   1          Clear_RAM_Range(0x2200,0x5E);   // Clear MailBox(BANK0) Reg.
+ 583   1          Clear_RAM_Range(0x2280,0x3F);   // Clear MailBox(BANK1) Reg.
+ 584   1          //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ 585   1      
+ 586   1      }
+ 587          //-----------------------------------------------------------------------------
+ 588          // Oem Init ACPI EC Spaces
+ 589          //-----------------------------------------------------------------------------
+ 590          const unsigned char code _ACPI_INI_Table[] =
+ 591          {
+ 592              0x01,0x00,0x30,0x11,0x30,0x11,0x01,0x00,
+ 593              0x5C,0x2B,0x1E,0x01,0x9A,0x00,0x9A,0x00,
+ 594              0x96,0x10,
+ 595              'I','T','E','0','0','0','0','1',
+ 596              '0','0','0','1',0x00,0x00,0x00,0x00,
+ 597              'L','i','O','N',0x00,0x00,0x00,0x00,
+ 598              'O','E','M',0x00,0x00,0x00,0x00,0x00,
+ 599              0x02,0x00,0xD0,0x07,0xD0,0x07,0x5C,0x2B,
+ 600              0x00,0x00,0x05,0x00,
+ 601          };
+ 602          //-----------------------------------------------------------------------------
+ 603          void OEM_INIT_ACPI(void)
+ 604          {
+ 605   1          //Sample Code
+ 606   1          //BYTE index = 0x00;
+ 607   1      
+ 608   1          //while(index < ( sizeof(_ACPI_INI_Table) ) )
+ 609   1          //{
+ 610   1          //    Tmp_XPntr = ( ECSpace + index );
+ 611   1          //  *Tmp_XPntr = _ACPI_INI_Table[index];
+ 612   1          //    index ++;
+ 613   1          //}
+C51 COMPILER V7.06   OEM_MAIN                                                              07/06/2010 09:59:49 PAGE 11  
+
+ 614   1      
+ 615   1      }
+ 616          //-----------------------------------------------------------------------------
+ 617          
+ 618          //*****************************************************************************
+ 619          // OEM
+ 620          //*****************************************************************************
+ 621          
+ 622          /*-----------------------------------------------------------------------------
+ 623           * End
+ 624           *---------------------------------------------------------------------------*/
+C51 COMPILER V7.06   OEM_MAIN                                                              07/06/2010 09:59:49 PAGE 12  
+
+ASSEMBLY LISTING OF GENERATED OBJECT CODE
+
+
+             ; FUNCTION Hook_Timer5msEvent (BEGIN)
+                                           ; SOURCE LINE # 19
+                                           ; SOURCE LINE # 20
+                                           ; SOURCE LINE # 21
+0000 120000      E     LCALL   Oem_SysPowerContrl
+                                           ; SOURCE LINE # 22
+0003 120000      E     LCALL   HandleSMBusData
+                                           ; SOURCE LINE # 25
+0006 120000      E     LCALL   SMBusA_Scan_Center
+                                           ; SOURCE LINE # 29
+0009 020000      E     LJMP    SMBusB_Scan_Center
+             ; FUNCTION Hook_Timer5msEvent (END)
+
+             ; FUNCTION Hook_Timer10msEvent (BEGIN)
+                                           ; SOURCE LINE # 45
+                                           ; SOURCE LINE # 46
+                                           ; SOURCE LINE # 47
+0000 020000      E     LJMP    CoreAutoScanADC
+             ; FUNCTION Hook_Timer10msEvent (END)
+
+             ; FUNCTION Hook_Timer50msEventA (BEGIN)
+                                           ; SOURCE LINE # 54
+                                           ; SOURCE LINE # 55
+                                           ; SOURCE LINE # 57
+0000 22                RET     
+             ; FUNCTION Hook_Timer50msEventA (END)
+
+             ; FUNCTION Hook_Timer50msEventB (BEGIN)
+                                           ; SOURCE LINE # 60
+                                           ; SOURCE LINE # 61
+                                           ; SOURCE LINE # 63
+0000 22                RET     
+             ; FUNCTION Hook_Timer50msEventB (END)
+
+             ; FUNCTION Hook_Timer50msEventC (BEGIN)
+                                           ; SOURCE LINE # 66
+                                           ; SOURCE LINE # 67
+                                           ; SOURCE LINE # 68
+0000 020000      E     LJMP    CheckBatteryPlugInOut
+             ; FUNCTION Hook_Timer50msEventC (END)
+
+             ; FUNCTION Hook_Timer100msEventA (BEGIN)
+                                           ; SOURCE LINE # 74
+                                           ; SOURCE LINE # 75
+                                           ; SOURCE LINE # 78
+0000 22                RET     
+             ; FUNCTION Hook_Timer100msEventA (END)
+
+             ; FUNCTION Hook_Timer100msEventB (BEGIN)
+                                           ; SOURCE LINE # 80
+                                           ; SOURCE LINE # 81
+                                           ; SOURCE LINE # 84
+0000 22                RET     
+             ; FUNCTION Hook_Timer100msEventB (END)
+
+             ; FUNCTION Hook_Timer100msEventC (BEGIN)
+                                           ; SOURCE LINE # 86
+                                           ; SOURCE LINE # 87
+                                           ; SOURCE LINE # 90
+C51 COMPILER V7.06   OEM_MAIN                                                              07/06/2010 09:59:49 PAGE 13  
+
+0000 22                RET     
+             ; FUNCTION Hook_Timer100msEventC (END)
+
+             ; FUNCTION Hook_Timer125msEvent (BEGIN)
+                                           ; SOURCE LINE # 94
+                                           ; SOURCE LINE # 95
+                                           ; SOURCE LINE # 97
+0000 22                RET     
+             ; FUNCTION Hook_Timer125msEvent (END)
+
+             ; FUNCTION Hook_Timer250msEvent (BEGIN)
+                                           ; SOURCE LINE # 101
+                                           ; SOURCE LINE # 102
+                                           ; SOURCE LINE # 104
+0000 22                RET     
+             ; FUNCTION Hook_Timer250msEvent (END)
+
+             ; FUNCTION Hook_Timer500msEventA (BEGIN)
+                                           ; SOURCE LINE # 108
+                                           ; SOURCE LINE # 109
+                                           ; SOURCE LINE # 110
+0000 020000      E     LJMP    Service_LED_Indicator
+             ; FUNCTION Hook_Timer500msEventA (END)
+
+             ; FUNCTION Hook_Timer500msEventB (BEGIN)
+                                           ; SOURCE LINE # 114
+                                           ; SOURCE LINE # 115
+                                           ; SOURCE LINE # 117
+0000 22                RET     
+             ; FUNCTION Hook_Timer500msEventB (END)
+
+             ; FUNCTION Hook_Timer500msEventC (BEGIN)
+                                           ; SOURCE LINE # 119
+                                           ; SOURCE LINE # 120
+                                           ; SOURCE LINE # 122
+0000 22                RET     
+             ; FUNCTION Hook_Timer500msEventC (END)
+
+             ; FUNCTION Hook_Timer1SecEventA (BEGIN)
+                                           ; SOURCE LINE # 126
+                                           ; SOURCE LINE # 127
+                                           ; SOURCE LINE # 129
+0000 90162E            MOV     DPTR,#0162EH
+0003 E0                MOVX    A,@DPTR
+0004 54C0              ANL     A,#0C0H
+0006 7015              JNZ     ?C0015
+                                           ; SOURCE LINE # 130
+                                           ; SOURCE LINE # 131
+0008 90181F            MOV     DPTR,#0181FH
+000B E0                MOVX    A,@DPTR
+000C FF                MOV     R7,A
+000D 90181E            MOV     DPTR,#0181EH
+0010 E0                MOVX    A,@DPTR
+0011 FD                MOV     R5,A
+0012 120000      E     LCALL   _GetFanRPM
+0015 900000      E     MOV     DPTR,#Fan1RPM
+0018 EE                MOV     A,R6
+0019 F0                MOVX    @DPTR,A
+001A A3                INC     DPTR
+001B EF                MOV     A,R7
+001C F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 132
+C51 COMPILER V7.06   OEM_MAIN                                                              07/06/2010 09:59:49 PAGE 14  
+
+                                           ; SOURCE LINE # 134
+001D         ?C0015:
+001D 22                RET     
+             ; FUNCTION Hook_Timer1SecEventA (END)
+
+             ; FUNCTION Hook_Timer1SecEventB (BEGIN)
+                                           ; SOURCE LINE # 136
+                                           ; SOURCE LINE # 137
+                                           ; SOURCE LINE # 145
+0000 22                RET     
+             ; FUNCTION Hook_Timer1SecEventB (END)
+
+             ; FUNCTION Hook_Timer1SecEventC (BEGIN)
+                                           ; SOURCE LINE # 147
+                                           ; SOURCE LINE # 148
+                                           ; SOURCE LINE # 149
+0000 020000      E     LJMP    Oem_ColdBootTester
+             ; FUNCTION Hook_Timer1SecEventC (END)
+
+             ; FUNCTION Hook_Timer1MinEvent (BEGIN)
+                                           ; SOURCE LINE # 156
+                                           ; SOURCE LINE # 157
+                                           ; SOURCE LINE # 159
+0000 22                RET     
+             ; FUNCTION Hook_Timer1MinEvent (END)
+
+             ; FUNCTION Service_OEM_LoTimer (BEGIN)
+                                           ; SOURCE LINE # 169
+                                           ; SOURCE LINE # 170
+                                           ; SOURCE LINE # 172
+0000 22                RET     
+             ; FUNCTION Service_OEM_LoTimer (END)
+
+             ; FUNCTION Service_WaitPS2_Handle (BEGIN)
+                                           ; SOURCE LINE # 178
+                                           ; SOURCE LINE # 179
+                                           ; SOURCE LINE # 180
+0000 22                RET     
+             ; FUNCTION Service_WaitPS2_Handle (END)
+
+             ; FUNCTION OemSetWakeUpSource (BEGIN)
+                                           ; SOURCE LINE # 187
+                                           ; SOURCE LINE # 188
+                                           ; SOURCE LINE # 189
+0000 901104            MOV     DPTR,#01104H
+0003 E0                MOVX    A,@DPTR
+0004 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 190
+0005 901106            MOV     DPTR,#01106H
+0008 E0                MOVX    A,@DPTR
+0009 4402              ORL     A,#02H
+000B F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 191
+000C A3                INC     DPTR
+000D E0                MOVX    A,@DPTR
+000E 4401              ORL     A,#01H
+0010 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 193
+0011 7800        E     MOV     R0,#LOW CORE_PMFLAG
+0013 E6                MOV     A,@R0
+0014 901105            MOV     DPTR,#01105H
+0017 30E005            JNB     ACC.0,?C0021
+C51 COMPILER V7.06   OEM_MAIN                                                              07/06/2010 09:59:49 PAGE 15  
+
+                                           ; SOURCE LINE # 194
+                                           ; SOURCE LINE # 195
+001A 7408              MOV     A,#08H
+001C F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 196
+001D 8004              SJMP    ?C0022
+001F         ?C0021:
+                                           ; SOURCE LINE # 198
+                                           ; SOURCE LINE # 199
+001F E0                MOVX    A,@DPTR
+0020 4488              ORL     A,#088H
+0022 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 200
+0023         ?C0022:
+                                           ; SOURCE LINE # 203
+0023 D3                SETB    C
+                                           ; SOURCE LINE # 205
+0024         ?C0023:
+0024 22                RET     
+             ; FUNCTION OemSetWakeUpSource (END)
+
+             ; FUNCTION vCheckChipCanDeepSleep (BEGIN)
+                                           ; SOURCE LINE # 212
+                                           ; SOURCE LINE # 213
+                                           ; SOURCE LINE # 216
+                                           ; SOURCE LINE # 217
+0000 90058C            MOV     DPTR,#058CH
+0003 7405              MOV     A,#05H
+0005 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 218
+0006 C3                CLR     C
+0007 22                RET     
+                                           ; SOURCE LINE # 219
+                                           ; SOURCE LINE # 221
+                                           ; SOURCE LINE # 224
+             ; FUNCTION vCheckChipCanDeepSleep (END)
+
+             ; FUNCTION InitEnterDeepSleep (BEGIN)
+                                           ; SOURCE LINE # 271
+                                           ; SOURCE LINE # 272
+                                           ; SOURCE LINE # 282
+;---- Variable 'iTemp' assigned to Register 'R7' ----
+0000 E4                CLR     A
+0001 FF                MOV     R7,A
+0002         ?C0027:
+                                           ; SOURCE LINE # 283
+                                           ; SOURCE LINE # 284
+                                           ; SOURCE LINE # 285
+0002 EF                MOV     A,R7
+0003 75F003            MOV     B,#03H
+0006 A4                MUL     AB
+0007 2400        R     ADD     A,#LOW InitEnterDeepReg+02H
+0009 F582              MOV     DPL,A
+000B E4                CLR     A
+000C 3400        R     ADDC    A,#HIGH InitEnterDeepReg+02H
+000E F583              MOV     DPH,A
+0010 E4                CLR     A
+0011 93                MOVC    A,@A+DPTR
+0012 FE                MOV     R6,A
+0013 EF                MOV     A,R7
+0014 75F003            MOV     B,#03H
+0017 A4                MUL     AB
+C51 COMPILER V7.06   OEM_MAIN                                                              07/06/2010 09:59:49 PAGE 16  
+
+0018 2400        R     ADD     A,#LOW InitEnterDeepReg
+001A F582              MOV     DPL,A
+001C E4                CLR     A
+001D 3400        R     ADDC    A,#HIGH InitEnterDeepReg
+001F F583              MOV     DPH,A
+0021 E4                CLR     A
+0022 93                MOVC    A,@A+DPTR
+0023 FC                MOV     R4,A
+0024 7401              MOV     A,#01H
+0026 93                MOVC    A,@A+DPTR
+0027 F582              MOV     DPL,A
+0029 8C83              MOV     DPH,R4
+002B EE                MOV     A,R6
+002C F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 286
+002D 0F                INC     R7
+                                           ; SOURCE LINE # 287
+002E EF                MOV     A,R7
+002F B41AD0            CJNE    A,#01AH,?C0027
+                                           ; SOURCE LINE # 288
+0032         ?C0029:
+0032 22                RET     
+             ; FUNCTION InitEnterDeepSleep (END)
+
+             ; FUNCTION InitWakeFromDeepSleep (BEGIN)
+                                           ; SOURCE LINE # 319
+                                           ; SOURCE LINE # 320
+                                           ; SOURCE LINE # 323
+;---- Variable 'iTemp' assigned to Register 'R7' ----
+0000 E4                CLR     A
+0001 FF                MOV     R7,A
+0002         ?C0030:
+                                           ; SOURCE LINE # 324
+                                           ; SOURCE LINE # 325
+                                           ; SOURCE LINE # 326
+0002 EF                MOV     A,R7
+0003 75F003            MOV     B,#03H
+0006 A4                MUL     AB
+0007 2400        R     ADD     A,#LOW InitWakeUpDeepReg+02H
+0009 F582              MOV     DPL,A
+000B E4                CLR     A
+000C 3400        R     ADDC    A,#HIGH InitWakeUpDeepReg+02H
+000E F583              MOV     DPH,A
+0010 E4                CLR     A
+0011 93                MOVC    A,@A+DPTR
+0012 FE                MOV     R6,A
+0013 EF                MOV     A,R7
+0014 75F003            MOV     B,#03H
+0017 A4                MUL     AB
+0018 2400        R     ADD     A,#LOW InitWakeUpDeepReg
+001A F582              MOV     DPL,A
+001C E4                CLR     A
+001D 3400        R     ADDC    A,#HIGH InitWakeUpDeepReg
+001F F583              MOV     DPH,A
+0021 E4                CLR     A
+0022 93                MOVC    A,@A+DPTR
+0023 FC                MOV     R4,A
+0024 7401              MOV     A,#01H
+0026 93                MOVC    A,@A+DPTR
+0027 F582              MOV     DPL,A
+0029 8C83              MOV     DPH,R4
+002B EE                MOV     A,R6
+C51 COMPILER V7.06   OEM_MAIN                                                              07/06/2010 09:59:49 PAGE 17  
+
+002C F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 327
+002D 0F                INC     R7
+                                           ; SOURCE LINE # 328
+002E EF                MOV     A,R7
+002F B40FD0            CJNE    A,#0FH,?C0030
+                                           ; SOURCE LINE # 341
+0032         ?C0032:
+0032 22                RET     
+             ; FUNCTION InitWakeFromDeepSleep (END)
+
+             ; FUNCTION Service_LPCRST (BEGIN)
+                                           ; SOURCE LINE # 348
+                                           ; SOURCE LINE # 349
+                                           ; SOURCE LINE # 350
+0000 901602            MOV     DPTR,#01602H
+0003 E0                MOVX    A,@DPTR
+0004 4420              ORL     A,#020H
+0006 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 351
+0007 7800        E     MOV     R0,#LOW CORE_OSFLAG
+0009 E6                MOV     A,@R0
+000A 547F              ANL     A,#07FH
+000C F6                MOV     @R0,A
+                                           ; SOURCE LINE # 352
+000D 750038      E     MOV     Ccb42,#038H
+                                           ; SOURCE LINE # 353
+0010 22                RET     
+             ; FUNCTION Service_LPCRST (END)
+
+             ; FUNCTION OEM_Init_SMBus (BEGIN)
+                                           ; SOURCE LINE # 519
+                                           ; SOURCE LINE # 520
+                                           ; SOURCE LINE # 521
+;---- Variable 'index' assigned to Register 'R7' ----
+0000 E4                CLR     A
+0001 FF                MOV     R7,A
+0002         ?C0034:
+                                           ; SOURCE LINE # 522
+                                           ; SOURCE LINE # 523
+                                           ; SOURCE LINE # 524
+0002 EF                MOV     A,R7
+0003 75F003            MOV     B,#03H
+0006 A4                MUL     AB
+0007 2400        R     ADD     A,#LOW SMBus_REG_init_table
+0009 F582              MOV     DPL,A
+000B E4                CLR     A
+000C 3400        R     ADDC    A,#HIGH SMBus_REG_init_table
+000E F583              MOV     DPH,A
+0010 E4                CLR     A
+0011 93                MOVC    A,@A+DPTR
+0012 FC                MOV     R4,A
+0013 7401              MOV     A,#01H
+0015 93                MOVC    A,@A+DPTR
+0016 FD                MOV     R5,A
+0017 7800        E     MOV     R0,#LOW Tmp_XPntr
+0019 EC                MOV     A,R4
+001A F6                MOV     @R0,A
+001B 08                INC     R0
+001C ED                MOV     A,R5
+001D F6                MOV     @R0,A
+                                           ; SOURCE LINE # 525
+C51 COMPILER V7.06   OEM_MAIN                                                              07/06/2010 09:59:49 PAGE 18  
+
+001E EF                MOV     A,R7
+001F 75F003            MOV     B,#03H
+0022 A4                MUL     AB
+0023 2400        R     ADD     A,#LOW SMBus_REG_init_table+02H
+0025 F582              MOV     DPL,A
+0027 E4                CLR     A
+0028 3400        R     ADDC    A,#HIGH SMBus_REG_init_table+02H
+002A F583              MOV     DPH,A
+002C E4                CLR     A
+002D 93                MOVC    A,@A+DPTR
+002E 8D82              MOV     DPL,R5
+0030 8C83              MOV     DPH,R4
+0032 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 526
+0033 0F                INC     R7
+                                           ; SOURCE LINE # 527
+0034 EF                MOV     A,R7
+0035 B419CA            CJNE    A,#019H,?C0034
+0038         ?C0035:
+                                           ; SOURCE LINE # 530
+0038 90161B            MOV     DPTR,#0161BH
+003B E4                CLR     A
+003C F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 531
+003D A3                INC     DPTR
+003E F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 534
+003F 901621            MOV     DPTR,#01621H
+0042 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 535
+0043 A3                INC     DPTR
+0044 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 543
+0045 22                RET     
+             ; FUNCTION OEM_Init_SMBus (END)
+
+             ; FUNCTION OEM_ColdResetInit (BEGIN)
+                                           ; SOURCE LINE # 545
+                                           ; SOURCE LINE # 546
+                                           ; SOURCE LINE # 547
+;---- Variable 'index' assigned to Register 'R7' ----
+0000 E4                CLR     A
+0001 FF                MOV     R7,A
+                                           ; SOURCE LINE # 557
+0002 900000      E     MOV     DPTR,#Oem_CodeVer
+0005 740C              MOV     A,#0CH
+0007 F0                MOVX    @DPTR,A
+0008         ?C0037:
+                                           ; SOURCE LINE # 562
+                                           ; SOURCE LINE # 563
+                                           ; SOURCE LINE # 564
+0008 EF                MOV     A,R7
+0009 75F003            MOV     B,#03H
+000C A4                MUL     AB
+000D 2400        R     ADD     A,#LOW oem_reg_init_table
+000F F582              MOV     DPL,A
+0011 E4                CLR     A
+0012 3400        R     ADDC    A,#HIGH oem_reg_init_table
+0014 F583              MOV     DPH,A
+0016 E4                CLR     A
+0017 93                MOVC    A,@A+DPTR
+0018 FC                MOV     R4,A
+C51 COMPILER V7.06   OEM_MAIN                                                              07/06/2010 09:59:49 PAGE 19  
+
+0019 7401              MOV     A,#01H
+001B 93                MOVC    A,@A+DPTR
+001C FD                MOV     R5,A
+001D 7800        E     MOV     R0,#LOW Tmp_XPntr
+001F EC                MOV     A,R4
+0020 F6                MOV     @R0,A
+0021 08                INC     R0
+0022 ED                MOV     A,R5
+0023 F6                MOV     @R0,A
+                                           ; SOURCE LINE # 565
+0024 EF                MOV     A,R7
+0025 75F003            MOV     B,#03H
+0028 A4                MUL     AB
+0029 2400        R     ADD     A,#LOW oem_reg_init_table+02H
+002B F582              MOV     DPL,A
+002D E4                CLR     A
+002E 3400        R     ADDC    A,#HIGH oem_reg_init_table+02H
+0030 F583              MOV     DPH,A
+0032 E4                CLR     A
+0033 93                MOVC    A,@A+DPTR
+0034 8D82              MOV     DPL,R5
+0036 8C83              MOV     DPH,R4
+0038 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 566
+0039 0F                INC     R7
+                                           ; SOURCE LINE # 567
+003A EF                MOV     A,R7
+003B B414CA            CJNE    A,#014H,?C0037
+003E         ?C0038:
+                                           ; SOURCE LINE # 569
+003E 120000      R     LCALL   OEM_Init_SMBus
+                                           ; SOURCE LINE # 571
+0041 90110A            MOV     DPTR,#0110AH
+0044 E0                MOVX    A,@DPTR
+0045 4402              ORL     A,#02H
+0047 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 572
+0048 90110E            MOV     DPTR,#0110EH
+004B E0                MOVX    A,@DPTR
+004C 4402              ORL     A,#02H
+004E F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 573
+004F D2AA              SETB    EX1
+                                           ; SOURCE LINE # 574
+0051 901106            MOV     DPTR,#01106H
+0054 E0                MOVX    A,@DPTR
+0055 4402              ORL     A,#02H
+0057 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 575
+0058 901105            MOV     DPTR,#01105H
+005B E0                MOVX    A,@DPTR
+005C 4408              ORL     A,#08H
+005E F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 576
+005F 901904            MOV     DPTR,#01904H
+0062 7480              MOV     A,#080H
+0064 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 577
+0065 901906            MOV     DPTR,#01906H
+0068 04                INC     A
+0069 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 578
+C51 COMPILER V7.06   OEM_MAIN                                                              07/06/2010 09:59:49 PAGE 20  
+
+006A 901909            MOV     DPTR,#01909H
+006D 04                INC     A
+006E F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 579
+006F 90190C            MOV     DPTR,#0190CH
+0072 04                INC     A
+0073 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 580
+0074 120000      E     LCALL   Oem_SysOffInit
+                                           ; SOURCE LINE # 582
+0077 7D5E              MOV     R5,#05EH
+0079 7C00              MOV     R4,#00H
+007B 7F00              MOV     R7,#00H
+007D 7E22              MOV     R6,#022H
+007F 120000      E     LCALL   _Clear_RAM_Range
+                                           ; SOURCE LINE # 583
+0082 7D3F              MOV     R5,#03FH
+0084 7C00              MOV     R4,#00H
+0086 7F80              MOV     R7,#080H
+0088 7E22              MOV     R6,#022H
+008A 020000      E     LJMP    _Clear_RAM_Range
+             ; FUNCTION OEM_ColdResetInit (END)
+
+             ; FUNCTION OEM_INIT_ACPI (BEGIN)
+                                           ; SOURCE LINE # 603
+                                           ; SOURCE LINE # 604
+                                           ; SOURCE LINE # 615
+0000 22                RET     
+             ; FUNCTION OEM_INIT_ACPI (END)
+
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    443    ----
+   CONSTANT SIZE    =    320    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

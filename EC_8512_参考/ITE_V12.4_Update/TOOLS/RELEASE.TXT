@@ -1,0 +1,213 @@
+/*-----------------------------------------------------------------------------
+ * Filename: RELEASE.TXT
+ * Function: Release notes for ITE Embedded Controller kernel core.
+ * Copyright(c)2006-2009, ITE Tech. Inc. All Rights Reserved.
+ *
+ * Issue by ITE Technical Marketing Firmware Center
+ *---------------------------------------------------------------------------*/
+
+-------------------------------------------------------------------------------
+/*= Revision 1.1    Date: July 01, 2009 12:00:00
+
+Product:    IT8512E
+Subject:    Embedded Controller Kernel Code
+[BBLOCK] Boot-block Changed Description:
+1. Added/Reserved IrqNull for INT32-INT79.(BBK_IRQ.C)
+2. Removed all #pragma for control really "EA".(BBK_IRQ.C)
+
+[CORE] Kernel Changed Description:
+1. Added debug ACPI data setting to PROJECT.H->"En_Record62=1".(CORE_ACPI.C)
+2. Added "ClearEventBuffer" for OEM clear event.(CORE_ACPI.C)
+3. Merge RamCode for all command channel.(CORE_FLASH.C)
+4. Support Flash EC code.(CORE_FLASH.C)
+5. Change to "Ccb42_DISAB_KEY" for disable Service_SEND. Solved sometimes
+   key-in fail in BIOS CMOS setup menu.(CORE_HOSTIF.C)
+6. Added EC_TEST_VER for control firmware test version.(CORE_INIT.C)
+7. Removed unused CORE_PowerOff/CORE_PowerOn hook.(CORE_INIT.C)
+8. Removed scratch DMA-0 for main_service.(CORE_INIT.C)
+9. Added OemSetWakeUpSource return "FALSE" for reject chip idle.(CORE_MAIN.C)
+10. Improved Mouse Packet Rate.(CORE_MAIN.C)
+11. Adjustment memory spaces.(CORE_MEMORY.C)
+12. Fixed PS/2 command.(CORE_PORT6064.C)
+13. Added KB_CMD_F3_WAIT, set TRUE if BIOS can't set keyboard LED when system
+    POST.(CORE_PORT6064.C)
+14. Added/Changed PS/2 data process for improved PS/2 compatibility.
+    (CORE_PS2.C)
+15. Added Get_TouchPad_ID subroutine for BIOS get touchpad ID.(CORE_PS2.C)
+16. Added/Reserved Keyboard Matrix ID.(CORE_SCAN.C)
+17. Added utility KU.EXE support for generate matrix table.(CORE_SCAN.C)
+18. Adjustment SMBus service subroutine.(CORE_SMBUS.C)
+19. Added SMBus-D,Timeout,SMBUS_STATUS for SMBus service subroutine.
+    (CORE_SMBUS.C)
+20. Added SSKEY2 0xC0-0xDF.(CORE_XLT.C)
+21. Added/Reserved Matrix to RAM function.(COTR_XLT.C)
+22. Fixed cursor shift scan code for WHQL Keyboard requirement.(COTR_XLT.C)
+23. Added ITE EC chip NX register definition.(CHIP_DEF.H)
+24. Added ITE Cap.Sensors register definition.(CHIP_IT723X.H)
+25. Added 128K code sizes switch.(BIND.BAT)
+26. Added compiler command >BIND ERR for check build results.(BIND.BAT)
+
+Oem Sample code Description:
+[OEM][STDPRJ]:
+1. ITE EC Notebook Sample(ED8).
+2. Almost pure code for OEM development.
+
+[OEM][EV_VIA]:
+1. VIA VT6544 reference board.
+2. Most feature reference code for OEM development.
+
+[TOOLS]
+ECF102.EXE --- EC Flash Utility
+KU.EXE     --- Keyboard Matrix Table Generator
+I2EC.EXE   --- DOS mode EC Register Viewer
+
+-------------------------------------------------------------------------------
+
+-------------------------------------------------------------------------------
+/*= Revision 1.0    Date: December 08, 2008 12:00:00
+
+Product:    IT8512E
+Subject:    Embedded Controller Kernel Code
+Description:
+1. Solved can't compiler when PROJECT.H Setting "OEM_USE_TIMER2=0".(BBK_IRQ.C)
+2. Solved can't change Keyboard typematic rate.(CORE_PORT6064.C)
+3. Added Code snippet of clearing Dynamic caches.(CORE_FLASH.C)(Spec.7.1.10.6)
+4. Fixed PS/2 D4,D4_F2,D4_F3 AUX command and fixed can't responds with
+   "Resend"(0xFE) and "Error"(0xFC).(CORE_PORT6064.C)
+5. Skip some PS/2 detection step for speed-up TouchPad HotPlug.(CORE_PS2.C)
+6. Fixed subroutine CheckTouchPad_HotPlug().(CORE_PS2.C)
+7. Removed re-send timer on "Service_Send_PS2". (CORE_HOSTIF.C)
+
+-------------------------------------------------------------------------------
+
+-------------------------------------------------------------------------------
+/*= Revision 0.9    Date: November 20, 2008 12:00:00
+
+Product:    IT8512E
+Subject:    Embedded Controller Kernel Code
+Description:
+1. Support Timer2 for OEM. (PROJECT.H -> Setting "OEM_USE_TIMER2")
+2. Added SMBus Recovery module for prevent device locked the bus.
+3. Added PROJECT.H -> "ENABLE_S5_KEYBOARD_INTR","ENABLE_S3_KEYBOARD_INTR".
+   For support S3/S5 keyboard wake-up system function.
+4. Support "SUPPORT_KB_MATRIX_SCAN" setting for without KB matrix system.
+
+-------------------------------------------------------------------------------
+
+-------------------------------------------------------------------------------
+/*= Revision 0.8    Date: October 20, 2008 12:00:00
+
+Product:    IT8512E
+Subject:    Embedded Controller Kernel Code
+Description:
+1. Support TouchPad ID identification.(Synaptics,Sentelic)
+2. Added HotPlug check routine for Power On Sequence.
+3. Fixed PS/2 TouchPad 3 bytes,4 bytes data format service.
+
+-------------------------------------------------------------------------------
+
+-------------------------------------------------------------------------------
+/*= Revision 0.7    Date: September 18, 2008 12:00:00
+
+Product:    IT8512E
+Subject:    Embedded Controller Kernel Code
+Description:
+1. Clean-up unused OEM code.
+2. Clear all OEM customize variable parameter.
+
+-------------------------------------------------------------------------------
+/*= Revision 0.6    Date: August 21, 2008 12:00:00
+
+Product:    IT8512E
+Subject:    Embedded Controller Kernel Code
+Description:
+ 1. Added ACPI Burst Mode loop count for exit Burst Mode. (CORE_ACPI.C)
+ 2. Added Timeout for initial Super I/O function. (CORE_HOSTIF.C)
+ 3. Core Cache Mode change to default disabled. (CORE_INIT.C)
+ 4. Added SUPPORT_EC_SPI_MODULE for SPI service. (CORE_INIT.C)
+ 5. Move SMBus Initial to OEM Level. (CORE_INIT.C)
+ 6. Added SUPPORT_EC_DEEP_SLEEP for Power saving. (CORE_MAIN.C)
+ 7. Added difference A20 control. (CORE_PORT6064.C)
+ 8. Fixed PS/2 compatibility. (CORE_PS2.C)(CORE_PORT6064.C)
+ 9. Adjust Timer function. (CORE_TIMERS.C)
+10. Fixed some prefix scan code. (CORE_XLT.C)
+11. Move RamDebug Memory to "E" Segment.
+
+-------------------------------------------------------------------------------
+Files Contents: Reference TOOLS\DIR.TXT
+
+-------------------------------------------------------------------------------
+Release Histroy
+-------------------------------------------------------------------------------
+
+/*= Revision 0.5    Date: 5 June 2008 12:00:00
+
+Product:    IT8512E
+Subject:    Embedded Controller Kernel Code
+Description:
+ 1. Support ITE SiS EV Board (PROJECT.H -> ITE_EVBoard=1).
+ 2. Disabled kernel mouse debug switch (Debug_MouseData=0).
+ 3. Added project switch "SUPPORT_WINFLASH_KEEP_OS" for Winflash status after
+    flash mode.
+ 4. Added kernel "PS2_RamDebug" switch for debug PS/2 data.(Default=0)
+ 5. Solved PS/2 can't scan data problem. (PS2.S)
+
+
+/*= Revision 0.4    Date: 18 May 2008 12:00:00
+
+Product:    IT8512E
+Subject:    Embedded Controller Kernel Code
+Description:
+ 1. Support INT17 for LPCRST hook.
+ 2. Support optional "External GPIO_IT8301" Module Code.
+ 3. Support optional "One Wire Device Access" Module Code.
+ 4. Added Memory Struct FLAGReg8,FLAGReg.
+ 5. Added Key Overlay function.
+ 6. Support System Power Off Scan Matrix when Project Switch
+   "SYS_OFF_DISABLE_KSI_INT==0".
+ 7. Support Project Switch "USE_SERVICE_EVENT_CENTER", it can disabled kernel
+   core event center.(if OEM handle that)
+ 8. Added OEM EC_SUB_VER.
+ 9. Added Project Switch "OEM_HOOK_KB_DAT" for OemHandle_Data_To_Host.
+10. Removed kernel RamDebug.
+11. Move costomer_function to OEM folder.
+
+
+/*= Revision 0.3    Date: 18 April 2008 12:00:00
+
+Product:    IT8512E
+Subject:    Embedded Controller Kernel Code
+Description:
+1. Internal release for verification.
+2. CIR function move to OEM level for customize.
+3. Fixed PS/2 core for hot-plug/hot-swap and PS/2 Multiplexing.
+4. Reduce Boot-block file.
+5. Support Windows Update Utility.(Flash Code)
+6. Added some Main-loop traffic control.
+7. Added folder MODULE.OBJ for link OBJ file.
+8. Added FU.EXE firmware utility for CHECKSUM/COMBINE...
+
+
+/*= Revision 0.2    Date: 8 April 2008 12:00:00
+
+Product:    IT8512E
+Subject:    Embedded Controller Kernel Code
+Description:
+1. Internal release for verification.
+2. Changed some register naming, it follow the data sheet specification.
+3. Fixed PS/2 mouse can't work function.
+4. Support fix address after Flash code return.(For WinFlash Utility)
+5. Support SCI/SMI Event center.
+6. Support PS/2 Multiplexing.
+
+
+/*= Revision 0.1    Date: 02 April 2008 12:00:00
+
+Product:    IT8512E
+Subject:    Embedded Controller Kernel Code
+Description:
+1. Internal release for verification.
+
+*/
+
+/*-----------------------------------------------------------------------------

@@ -1,0 +1,411 @@
+C51 COMPILER V7.06   OEM_MEMORY                                                            07/06/2010 09:59:49 PAGE 1   
+
+
+C51 COMPILER V7.06, COMPILATION OF MODULE OEM_MEMORY
+OBJECT MODULE PLACED IN SOURCE\OEM_MEMORY.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\c51.exe SOURCE\OEM_MEMORY.C LA WL(1) CD OT(8,SIZE) OR
+
+stmt level    source
+
+   1          /*-----------------------------------------------------------------------------
+   2           * Filename: OEM_MEMORY.C     For Chipset: ITE.IT85XX
+   3           *
+   4           * Function: Memory Definition for extern all code base reference
+   5           *
+   6           * [Memory Map Description]
+   7           *
+   8           * =Chip Internal= 0x00-0xFF
+   9           * 0x00-0xFF     For Kernel and Chip Level use
+  10           *
+  11           ***************************************************
+  12           * Chip 8500       : External ram 0x000-0x7FF
+  13           * Chip Other 85XX : External ram 0x000-0xFFF
+  14           ***************************************************
+  15           * Memory Map :
+  16           * 0x000-0x0FF   For Kernel Core/Module
+  17           * 0x100-0x1FF   OEM RAM        
+  18           * 0x200-0x2FF   OEM RAM
+  19           * 0x300-0x3FF   OEM RAM        
+  20           * 0x400-0x4FF   OEM RAM
+  21           * 0x500-0x5FF   OEM RAM        
+  22           * 0x600-0x6FF   For ITE flash utility,EC SPI rom read write function, and ramdebug function.
+  23           * 0x700-0x7FF   For Keil C Complier and Ram Code Space (for SPI programming).
+  24           * 0x800-0x8FF   OEM RAM 
+  25           * 0x800-0x9FF   OEM RAM 
+  26           * 0xA00-0xAFF   OEM RAM 
+  27           * 0xB00-0xBFF   OEM RAM  
+  28           * 0xC00-0xCFF   OEM RAM 
+  29           * 0xD00-0xDFF   OEM RAM 
+  30           * 0xE00-0xEFF   OEM RAM 
+  31           * 0xF00-0xFFF   OEM RAM    
+  32           *
+  33           * Copyright (c) 2006-2009, ITE Tech. Inc. All Rights Reserved.
+  34           *---------------------------------------------------------------------------*/
+  35          
+  36          //-----------------------------------------------------------------------------
+  37          // Common Header Include
+  38          //-----------------------------------------------------------------------------
+  39          #include "CORE_INCLUDE.H"
+  40          #include "OEM_INCLUDE.H"
+  41          
+  42          //-----------------------------------------------------------------------------
+  43          /*****************************************************************************/
+  44          /* REGISTER MAPPING AREA *****************************************************/
+  45          /*****************************************************************************/
+  46          //-----------------------------------------------------------------------------
+  47          
+  48          //-----------------------------------------------------------------------------
+  49          /*****************************************************************************/
+  50          /* EXTERNAL RAM AREA      (0x0100 ~ 0x01FF) **********************************/
+  51          /*****************************************************************************/
+  52          //-----------------------------------------------------------------------------
+  53          #define BAT1_MemBase                0x0100
+  54          XBYTE   BAT1_ManufacturerAccess     _at_ BAT1_MemBase+0x00;
+  55          XBYTE   BAT1_BatteryMode            _at_ BAT1_MemBase+0x02;
+C51 COMPILER V7.06   OEM_MEMORY                                                            07/06/2010 09:59:49 PAGE 2   
+
+  56          XBYTE   BAT1_Temperature            _at_ BAT1_MemBase+0x04;
+  57          XBYTE   BAT1_Voltage                _at_ BAT1_MemBase+0x06;
+  58          XBYTE   BAT1_Current                _at_ BAT1_MemBase+0x08;
+  59          XBYTE   BAT1_AverageCurrent         _at_ BAT1_MemBase+0x0A;
+  60          XBYTE   BAT1_MaxError               _at_ BAT1_MemBase+0x0C;
+  61          XBYTE   BAT1_RelativeStateOfChg     _at_ BAT1_MemBase+0x0E;
+  62          XBYTE   BAT1_AbsoluteOfCharge       _at_ BAT1_MemBase+0x10;
+  63          XBYTE   BAT1_RemainingCapacity      _at_ BAT1_MemBase+0x12;
+  64          XBYTE   BAT1_FullChargeCapacity     _at_ BAT1_MemBase+0x14;
+  65          XBYTE   BAT1_ChargingCurrent        _at_ BAT1_MemBase+0x16;
+  66          XBYTE   BAT1_ChargingVoltage        _at_ BAT1_MemBase+0x18;
+  67          XBYTE   BAT1_BatteryStatus          _at_ BAT1_MemBase+0x1A;
+  68          XBYTE   BAT1_CycleCount             _at_ BAT1_MemBase+0x1C;
+  69          XBYTE   BAT1_DesignCapacity         _at_ BAT1_MemBase+0x1E;
+  70          XBYTE   BAT1_DesignVoltage          _at_ BAT1_MemBase+0x20;
+  71          XBYTE   BAT1_SpecificationInfo      _at_ BAT1_MemBase+0x22;
+  72          XBYTE   BAT1_ManufactureDate        _at_ BAT1_MemBase+0x24;
+  73          XBYTE   BAT1_SerialNumber           _at_ BAT1_MemBase+0x26;
+  74          XBYTE   BAT1_ManufacturerName[14]   _at_ BAT1_MemBase+0x28;
+  75          XBYTE   BAT1_DeviceName[14]         _at_ BAT1_MemBase+0x36;
+  76          XBYTE   BAT1_DeviceChemistry[6]     _at_ BAT1_MemBase+0x44;
+  77          XBYTE   BAT1_ManufacturerData       _at_ BAT1_MemBase+0x4A;
+  78          
+  79          
+  80          
+  81          /*
+  82          XBYTE BEC_REG_FLAG0
+  83              bEC_REG_ADP
+  84              bEC_REG_AFLT
+  85              bEC_REG_BAT0
+  86              bEC_REG_BPU0
+  87              bEC_REG_BTC0
+  88              bEC_REG_LIDS
+  89              bEC_REG_LSW0
+  90              bEC_REG_LWKE
+  91          XWORD   wEC_REG_BDC0
+  92          XWORD   wEC_REG_BFC0
+  93          XWORD   wEC_REG_BDV0
+  94          XBYTE   xEC_REG_BST0
+  95          XWORD   wEC_REG_BPR0
+  96          XWORD   wEC_REG_BRC0
+  97          XWORD   wEC_REG_BPV0
+  98          XWORD   wEC_REG_BTP0
+  99          XWORD   wEC_REG_BCW0
+ 100          XWORD   wEC_REG_BCL0
+ 101          XWORD   wEC_REG_BCG0
+ 102          XWORD   wEC_REG_BG20
+ 103          XBYTE   sEC_REG_BMO0[4]
+ 104          XBYTE   sEC_REG_BIF0[4]
+ 105          XWORD   wEC_REG_BSN0
+ 106          XBYTE   sEC_REG_BTY0[8]
+ 107          */
+ 108          
+ 109          //-----------------------------------------------------------------------------
+ 110          /*****************************************************************************/
+ 111          /* EXTERNAL RAM AREA      (0x0200 ~ 0x02FF) **********************************/
+ 112          /*****************************************************************************/
+ 113          //-----------------------------------------------------------------------------
+ 114          
+ 115          
+ 116          //-----------------------------------------------------------------------------
+ 117          /*****************************************************************************/
+C51 COMPILER V7.06   OEM_MEMORY                                                            07/06/2010 09:59:49 PAGE 3   
+
+ 118          /* EXTERNAL RAM AREA      (0x0300 ~ 0x03FF) **********************************/
+ 119          /*****************************************************************************/
+ 120          //-----------------------------------------------------------------------------
+ 121          
+ 122          
+ 123          //-----------------------------------------------------------------------------
+ 124          /*****************************************************************************/
+ 125          /* EXTERNAL RAM AREA      (0x0400 ~ 0x04FF) **********************************/
+ 126          /*****************************************************************************/
+ 127          
+ 128          
+ 129          /*****************************************************************************/
+ 130          /* EXTERNAL RAM AREA      (0x0500 ~ 0x05FF) **********************************/
+ 131          /*****************************************************************************/
+ 132          //-----------------------------------------------------------------------------
+ 133          #define SMBA_MemBase                0x0500
+ 134          XBYTE       SMBA_DEV_DIR            _at_ SMBA_MemBase+0x00; 
+ 135          XBYTE       SMBA_DEV_CTL            _at_ SMBA_MemBase+0x01;
+ 136          XBYTE       SMBA_DEV_CMD            _at_ SMBA_MemBase+0x02;
+ 137          XWORD       SMBA_DEV_MEM            _at_ SMBA_MemBase+0x03;
+ 138          XBYTE       SMBA_DEV_NO             _at_ SMBA_MemBase+0x05;
+ 139          FLAGReg8    SMBA_DEV_STATUS         _at_ SMBA_MemBase+0x06;
+ 140          XBYTE       SMBA_BYTE_CNT           _at_ SMBA_MemBase+0x07;
+ 141          XBYTE       SMBA_GET_TIMER          _at_ SMBA_MemBase+0x08;
+ 142          XBYTE       SMBA_Dev1_POLL_DIR      _at_ SMBA_MemBase+0x09;
+ 143          XBYTE       SMBA_Dev1_POLL_SPEED    _at_ SMBA_MemBase+0x0A;
+ 144          XBYTE       SMBA_Dev2_POLL_DIR      _at_ SMBA_MemBase+0x0B;
+ 145          XBYTE       SMBA_Dev2_POLL_SPEED    _at_ SMBA_MemBase+0x0C;
+ 146          XBYTE       SMBA_Dev3_POLL_DIR      _at_ SMBA_MemBase+0x0D;
+ 147          XBYTE       SMBA_Dev3_POLL_SPEED    _at_ SMBA_MemBase+0x0E;
+ 148          FLAGReg8    SMBA_DEBUG_FLAG         _at_ SMBA_MemBase+0x0F;
+ 149          //-----------------------------------------------------------------------------
+ 150          #define SMBB_MemBase                0x0510
+ 151          XBYTE       SMBB_DEV_DIR            _at_ SMBB_MemBase+0x00;
+ 152          XBYTE       SMBB_DEV_CTL            _at_ SMBB_MemBase+0x01;
+ 153          XBYTE       SMBB_DEV_CMD            _at_ SMBB_MemBase+0x02;
+ 154          XWORD       SMBB_DEV_MEM            _at_ SMBB_MemBase+0x03;
+ 155          XBYTE       SMBB_DEV_NO             _at_ SMBB_MemBase+0x05;
+ 156          FLAGReg8    SMBB_DEV_STATUS         _at_ SMBB_MemBase+0x06;
+ 157          XBYTE       SMBB_BYTE_CNT           _at_ SMBB_MemBase+0x07;
+ 158          XBYTE       SMBB_GET_TIMER          _at_ SMBB_MemBase+0x08;
+ 159          XBYTE       SMBB_Dev1_POLL_DIR      _at_ SMBB_MemBase+0x09;
+ 160          XBYTE       SMBB_Dev1_POLL_SPEED    _at_ SMBB_MemBase+0x0A;
+ 161          XBYTE       SMBB_Dev2_POLL_DIR      _at_ SMBB_MemBase+0x0B;
+ 162          XBYTE       SMBB_Dev2_POLL_SPEED    _at_ SMBB_MemBase+0x0C;
+ 163          XBYTE       SMBB_Dev3_POLL_DIR      _at_ SMBB_MemBase+0x0D;
+ 164          XBYTE       SMBB_Dev3_POLL_SPEED    _at_ SMBB_MemBase+0x0E;
+ 165          FLAGReg8    SMBB_DEBUG_FLAG         _at_ SMBB_MemBase+0x0F;
+ 166          //-----------------------------------------------------------------------------
+ 167          #define SMBC_MemBase                0x0520
+ 168          XBYTE       SMBC_DEV_DIR            _at_ SMBC_MemBase+0x00;
+ 169          XBYTE       SMBC_DEV_CTL            _at_ SMBC_MemBase+0x01;
+ 170          XBYTE       SMBC_DEV_CMD            _at_ SMBC_MemBase+0x02;
+ 171          XWORD       SMBC_DEV_MEM            _at_ SMBC_MemBase+0x03;
+ 172          XBYTE       SMBC_DEV_NO             _at_ SMBC_MemBase+0x05;
+ 173          FLAGReg8    SMBC_DEV_STATUS         _at_ SMBC_MemBase+0x06;
+ 174          XBYTE       SMBC_BYTE_CNT           _at_ SMBC_MemBase+0x07;
+ 175          XBYTE       SMBC_GET_TIMER          _at_ SMBC_MemBase+0x08;
+ 176          XBYTE       SMBC_Dev1_POLL_DIR      _at_ SMBC_MemBase+0x09;
+ 177          XBYTE       SMBC_Dev1_POLL_SPEED    _at_ SMBC_MemBase+0x0A;
+ 178          XBYTE       SMBC_Dev2_POLL_DIR      _at_ SMBC_MemBase+0x0B;
+ 179          XBYTE       SMBC_Dev2_POLL_SPEED    _at_ SMBC_MemBase+0x0C;
+C51 COMPILER V7.06   OEM_MEMORY                                                            07/06/2010 09:59:49 PAGE 4   
+
+ 180          XBYTE       SMBC_Dev3_POLL_DIR      _at_ SMBC_MemBase+0x0D;
+ 181          XBYTE       SMBC_Dev3_POLL_SPEED    _at_ SMBC_MemBase+0x0E;
+ 182          FLAGReg8    SMBC_DEBUG_FLAG         _at_ SMBC_MemBase+0x0F;
+ 183          //-----------------------------------------------------------------------------
+ 184          #define SMBD_MemBase                0x0530
+ 185          XBYTE       SMBA_Dev1_FailCount     _at_ SMBD_MemBase+0x00;
+ 186          XBYTE       SMBA_Dev2_FailCount     _at_ SMBD_MemBase+0x01;
+ 187          XBYTE       SMBA_Dev3_FailCount     _at_ SMBD_MemBase+0x02;
+ 188          XBYTE       SMBB_Dev1_FailCount     _at_ SMBD_MemBase+0x03;
+ 189          XBYTE       SMBB_Dev2_FailCount     _at_ SMBD_MemBase+0x04;
+ 190          XBYTE       SMBB_Dev3_FailCount     _at_ SMBD_MemBase+0x05;
+ 191          XBYTE       SMBC_Dev1_FailCount     _at_ SMBD_MemBase+0x06;
+ 192          XBYTE       SMBC_Dev2_FailCount     _at_ SMBD_MemBase+0x07;
+ 193          XBYTE       SMBC_Dev3_FailCount     _at_ SMBD_MemBase+0x08;
+ 194          //-----------------------------------------------------------------------------
+ 195          XBYTE       SMBX_ACCESS_CHANNEL     _at_ SMBD_MemBase+0x09;
+ 196          XBYTE       SMBX_ACCESS_DEV_ADDR    _at_ SMBD_MemBase+0x0A;
+ 197          XBYTE       SMBX_ACCESS_DEV_CTL     _at_ SMBD_MemBase+0x0B;
+ 198          XBYTE       SMBX_ACCESS_DEV_CMD     _at_ SMBD_MemBase+0x0C;
+ 199          XWORD       SMBX_ACCESS_DEV_MEM     _at_ SMBD_MemBase+0x0D;
+ 200          XBYTE       SMBX_DEBUG_MODE_ENABLE  _at_ SMBD_MemBase+0x0F;
+ 201          //-----------------------------------------------------------------------------
+ 202          #define SMBX_MemBase                0x0540
+ 203          XBYTE   SMB_BUF[32]                 _at_ SMBX_MemBase+0x00;
+ 204          XBYTE   SMB_BUF2[32]                _at_ SMBX_MemBase+0x20;
+ 205          //-----------------------------------------------------------------------------
+ 206          //-----------------------------------------------------------------------------
+ 207          /*****************************************************************************/
+ 208          /* EXTERNAL RAM AREA      (0x0600 ~ 0x06FF) **********************************/
+ 209          /*****************************************************************************/
+ 210          //-----------------------------------------------------------------------------
+ 211          // For ITE flash utility,EC SPI rom read write function, and ramdebug function.
+ 212          
+ 213          //-----------------------------------------------------------------------------
+ 214          /*****************************************************************************/
+ 215          /* EXTERNAL RAM AREA      (0x0700 ~ 0x07FF) **********************************/
+ 216          /*****************************************************************************/
+ 217          //-----------------------------------------------------------------------------
+ 218          // For Keil C Complier and Ram Code Space (for SPI programming).
+ 219          
+ 220          //-----------------------------------------------------------------------------
+ 221          /*****************************************************************************/
+ 222          /* EXTERNAL RAM AREA      (0x0800 ~ 0x08FF) **********************************/
+ 223          /*****************************************************************************/
+ 224          //-----------------------------------------------------------------------------
+ 225          
+ 226          //-----------------------------------------------------------------------------
+ 227          /*****************************************************************************/
+ 228          /* EXTERNAL RAM AREA      (0x0900 ~ 0x09FF) **********************************/
+ 229          /*****************************************************************************/
+ 230          //-----------------------------------------------------------------------------
+ 231          
+ 232          //-----------------------------------------------------------------------------
+ 233          /*****************************************************************************/
+ 234          /* EXTERNAL RAM AREA      (0x0A00 ~ 0x0AFF) **********************************/
+ 235          /*****************************************************************************/
+ 236          //-----------------------------------------------------------------------------
+ 237          
+ 238          //-----------------------------------------------------------------------------
+ 239          /*****************************************************************************/
+ 240          /* EXTERNAL RAM AREA      (0x0B00 ~ 0x0BFF) **********************************/
+ 241          /*****************************************************************************/
+C51 COMPILER V7.06   OEM_MEMORY                                                            07/06/2010 09:59:49 PAGE 5   
+
+ 242          //-----------------------------------------------------------------------------
+ 243          
+ 244          /*****************************************************************************/
+ 245          /* EXTERNAL RAM AREA      (0x0C00 ~ 0x0CFF) **********************************/
+ 246          /*****************************************************************************/
+ 247          //-----------------------------------------------------------------------------
+ 248          
+ 249          //-----------------------------------------------------------------------------
+ 250          /*****************************************************************************/
+ 251          /* EXTERNAL RAM AREA      (0x0D00 ~ 0x0DFF) **********************************/
+ 252          /*****************************************************************************/
+ 253          //-----------------------------------------------------------------------------
+ 254          
+ 255          //-----------------------------------------------------------------------------
+ 256          /*****************************************************************************/
+ 257          /* EXTERNAL RAM AREA      (0x0E00 ~ 0x0EFF) **********************************/
+ 258          /*****************************************************************************/
+ 259          //-----------------------------------------------------------------------------
+ 260          
+ 261          //-----------------------------------------------------------------------------
+ 262          /*****************************************************************************/
+ 263          /* EXTERNAL RAM AREA      (0x0F00 ~ 0x0FFF) **********************************/
+ 264          /*****************************************************************************/
+ 265          //-----------------------------------------------------------------------------
+ 266          
+ 267          //-----------------------------------------------------------------------------
+ 268          /*****************************************************************************/
+ 269          /* BRAM AREA      (0x2280 ~ 0x22BF) ******************************************/
+ 270          /*****************************************************************************/
+ 271          //-----------------------------------------------------------------------------
+ 272          #define BRAM_BASE                   0x2280
+ 273          //-----------------------------------------------------------------------------
+ 274          //-----------------------------------------------------------------------------
+ 275          //=============================================================================
+ 276          
+ 277          /*****************************************************************************/
+ 278          // FUNCTION CALL AREA
+ 279          /*****************************************************************************/
+ 280          void Clear_RAM_Range(WORD nAddr, WORD nSize)
+ 281          {
+ 282   1          WORD i;
+ 283   1          Tmp_XPntr = (unsigned int*)nAddr;
+ 284   1          for( i=0; i<=nSize; i++ )
+ 285   1          {
+ 286   2              *Tmp_XPntr = 0;
+ 287   2              Tmp_XPntr++;
+ 288   2          }
+ 289   1      
+ 290   1      }
+ 291          //----------------------------------------------------------------------------
+ 292          
+ 293          /*****************************************************************************/
+ 294          // END
+ 295          /*****************************************************************************/
+ 296          
+ 297          //-----------------------------------------------------------------------------
+ 298          
+C51 COMPILER V7.06   OEM_MEMORY                                                            07/06/2010 09:59:49 PAGE 6   
+
+ASSEMBLY LISTING OF GENERATED OBJECT CODE
+
+
+             ; FUNCTION _Clear_RAM_Range (BEGIN)
+                                           ; SOURCE LINE # 280
+0000 900000      R     MOV     DPTR,#nAddr
+0003 EE                MOV     A,R6
+0004 F0                MOVX    @DPTR,A
+0005 A3                INC     DPTR
+0006 EF                MOV     A,R7
+0007 F0                MOVX    @DPTR,A
+0008 900000      R     MOV     DPTR,#nSize
+000B EC                MOV     A,R4
+000C F0                MOVX    @DPTR,A
+000D A3                INC     DPTR
+000E ED                MOV     A,R5
+000F F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 281
+                                           ; SOURCE LINE # 283
+0010 900000      R     MOV     DPTR,#nAddr
+0013 E0                MOVX    A,@DPTR
+0014 FE                MOV     R6,A
+0015 A3                INC     DPTR
+0016 E0                MOVX    A,@DPTR
+0017 7800        E     MOV     R0,#LOW Tmp_XPntr
+0019 A606              MOV     @R0,AR6
+001B 08                INC     R0
+001C F6                MOV     @R0,A
+                                           ; SOURCE LINE # 284
+001D E4                CLR     A
+001E 900000      R     MOV     DPTR,#i
+0021 F0                MOVX    @DPTR,A
+0022 A3                INC     DPTR
+0023 F0                MOVX    @DPTR,A
+0024         ?C0001:
+0024 900000      R     MOV     DPTR,#nSize
+0027 E0                MOVX    A,@DPTR
+0028 FE                MOV     R6,A
+0029 A3                INC     DPTR
+002A E0                MOVX    A,@DPTR
+002B FF                MOV     R7,A
+002C D3                SETB    C
+002D 900000      R     MOV     DPTR,#i+01H
+0030 E0                MOVX    A,@DPTR
+0031 9F                SUBB    A,R7
+0032 900000      R     MOV     DPTR,#i
+0035 E0                MOVX    A,@DPTR
+0036 9E                SUBB    A,R6
+0037 501E              JNC     ?C0004
+                                           ; SOURCE LINE # 285
+                                           ; SOURCE LINE # 286
+0039 7800        E     MOV     R0,#LOW Tmp_XPntr
+003B E6                MOV     A,@R0
+003C FE                MOV     R6,A
+003D 08                INC     R0
+003E E6                MOV     A,@R0
+003F F582              MOV     DPL,A
+0041 8E83              MOV     DPH,R6
+0043 E4                CLR     A
+0044 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 287
+0045 06                INC     @R0
+C51 COMPILER V7.06   OEM_MEMORY                                                            07/06/2010 09:59:49 PAGE 7   
+
+0046 E6                MOV     A,@R0
+0047 18                DEC     R0
+0048 7001              JNZ     ?C0005
+004A 06                INC     @R0
+004B         ?C0005:
+                                           ; SOURCE LINE # 288
+004B 900000      R     MOV     DPTR,#i
+004E E4                CLR     A
+004F 75F001            MOV     B,#01H
+0052 120000      E     LCALL   ?C?IILDX
+0055 80CD              SJMP    ?C0001
+                                           ; SOURCE LINE # 290
+0057         ?C0004:
+0057 22                RET     
+             ; FUNCTION _Clear_RAM_Range (END)
+
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     88    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----       6
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

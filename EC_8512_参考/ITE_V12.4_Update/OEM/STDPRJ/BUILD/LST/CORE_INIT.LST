@@ -1,0 +1,545 @@
+C51 COMPILER V7.06   CORE_INIT                                                             07/06/2010 09:59:43 PAGE 1   
+
+
+C51 COMPILER V7.06, COMPILATION OF MODULE CORE_INIT
+OBJECT MODULE PLACED IN SOURCE\CORE_INIT.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\c51.exe SOURCE\CORE_INIT.C LA WL(1) CD OT(8,SIZE) OR
+
+stmt level    source
+
+   1          /*-----------------------------------------------------------------------------
+   2           * TITLE: CORE_INIT.C - initialization functions used during a reset.
+   3           *
+   4           * Main processing loop (interrupt driven) for the keyboard controller/scanner.
+   5           *
+   6           * Copyright (c) 1983-2009, Insyde Software Corporation. All Rights Reserved.
+   7           *
+   8           * You may not reproduce, distribute, publish, display, perform, modify, adapt,
+   9           * transmit, broadcast, present, recite, release, license or otherwise exploit
+  10           * any part of this publication in any form, by any means, without the prior
+  11           * written permission of Insyde Software Corporation.
+  12           *---------------------------------------------------------------------------*/
+  13          #include "CORE_INCLUDE.H"
+  14          #include "OEM_INCLUDE.H"
+  15          
+  16          //-----------------------------------------------------------------------------
+  17          // Reset_Initialization - Initialize the registers and data variables.
+  18          //
+  19          //-----------------------------------------------------------------------------
+  20          void Reset_Initialization(void)
+  21          {
+  22   1          //Init_ClearRam();      // Dino move to startup.a51
+  23   1          Init_GPIO();
+  24   1          
+  25   1          #ifdef HSPI
+                      GPIO_HSPI_INIT();
+                  LoadSPIFucnToRam(HSPI_RamCode);     // Load function to ram
+                  #endif
+  29   1          
+  30   1          #ifdef PECI_Support
+                  Init_PECI();
+                  #endif
+  33   1          
+  34   1          Init_Regs();
+  35   1          Init_Timers();
+  36   1          Init_Kbd();
+  37   1          Cold_Reset();
+  38   1          Common_Reset();
+  39   1          Init_PS2();
+  40   1          Init_Cache();
+  41   1          OEM_ColdResetInit();
+  42   1      
+  43   1          #ifdef ITE_EVBoard
+                  CLEAR_BIT(KBHISR,2);
+                  SET_BIT(GPIOD,3); // = 1;    //PD.3 SCI
+                  SET_BIT(GPIOB,5); // = 1;    //PB.5 A20
+                  SET_BIT(GPIOB,6); // = 1;    //PB.6 KB_RST
+                 // InitShareMemory();
+                  InitSio();
+              
+                  GPIO_F0_CTRL = 0x00;
+                  GPIO_F1_CTRL = 0x00;
+                  GPIO_F2_CTRL = 0x00;
+                  GPIO_F3_CTRL = 0x00;
+                  GPIO_F4_CTRL = 0x00;
+C51 COMPILER V7.06   CORE_INIT                                                             07/06/2010 09:59:43 PAGE 2   
+
+                  GPIO_F5_CTRL = 0x00;
+              
+                  //Oem_SysOnInit();
+              
+                  #endif
+  61   1          //- - - - - - - - - - - - - - - - -
+  62   1      }
+  63          
+  64          //-----------------------------------------------------------------------------
+  65          // The function of enabling interrupts
+  66          //
+  67          //-----------------------------------------------------------------------------
+  68          void vInitEnableInterrupt(void)
+  69          {
+  70   1          EX1 = 1;                // enable external 1 interrupt
+  71   1          EnableAllInterrupt();   // enable global interrupt
+  72   1      }
+  73          //-----------------------------------------------------------------------------
+  74          
+  75          //-----------------------------------------------------------------------------
+  76          // The function of init. registers
+  77          //
+  78          //-----------------------------------------------------------------------------
+  79          const struct REG_INIT_DEF code reg_init_table[] =
+  80          {
+  81              // HOST interface
+  82              { &SPCTRL1,     _Init_I2EC  },  // Enable I2EC R/W
+  83              { &BADRSEL,     _Init_BADR  },
+  84              { &RSTS,        0x84        },
+  85          
+  86              // KBC and PM interface
+  87              { &KBIRQR,      0x00        },  // Disable KBC IRQ
+  88              { &KBHICR,      BIT3+BIT6   },  // KBC port control IBFCIE+PMICIE
+  89              { &PM1CTL,      BIT0+BIT6   },  // EC port control  IBFCIE+SCI low active
+  90              { &PM2CTL,      BIT0+BIT6   },  // EC port2 control IBFCIE+SCI low active
+  91          
+  92              // PS2
+  93              { &PSCTL1,      PS2_InhibitMode     },  // Disable Debounce , Inhibit CLK
+  94              { &PSCTL2,      PS2_InhibitMode     },  // Disable Debounce , Inhibit CLK
+  95              { &PSCTL3,      PS2_InhibitMode     },  // Disable Debounce , Inhibit CLK
+  96              { &PSINT1,      0x06        },  // Transation Done Interrupt
+  97              { &PSINT2,      0x06        },  // Transation Done Interrupt
+  98              { &PSINT3,      0x06        },  // Transation Done Interrupt
+  99          
+ 100              // Keyboard Matrix Scan
+ 101              { &KSOCTRL,     BIT0        },  //
+ 102              { &KSICTRL,     BIT2        },  //
+ 103          
+ 104              // ADC Initial&Calibration
+ 105              { &ADCSTS,      BIT3        },   // Enable Analog accuracy initialization
+ 106              { &ADCSTS,      0           },   // Stop adc accuracy initialization
+ 107              { &ADCCFG,      0           },   //
+ 108              { &KDCTL,       BIT7        },   // Enable Hardware Callibration
+ 109              { &ADCCFG,      BIT0 + BIT5 },   // Enable Digital Filter enable
+ 110          
+ 111              // DAC
+ 112              { &DACCTRL,     _Init_DAC   },  //
+ 113              { &DACPDREG,    0x00        },  //
+ 114          
+ 115          };
+ 116          //-----------------------------------------------------------------------------
+ 117          void Init_Regs(void)
+C51 COMPILER V7.06   CORE_INIT                                                             07/06/2010 09:59:43 PAGE 3   
+
+ 118          {
+ 119   1          BYTE index = 0x00;
+ 120   1      
+ 121   1          while( index < (sizeof(reg_init_table)/3) )
+ 122   1          {
+ 123   2              Tmp_XPntr  = reg_init_table[index].address;
+ 124   2              *Tmp_XPntr = reg_init_table[index].initdata;
+ 125   2              index ++;
+ 126   2          }
+ 127   1      
+ 128   1      }
+ 129          //-----------------------------------------------------------------------------
+ 130          
+ 131          //-----------------------------------------------------------------------------
+ 132          // FUNCTION: cold_reset - Initialization when power goes on
+ 133          //
+ 134          //-----------------------------------------------------------------------------
+ 135          void Cold_Reset(void)
+ 136          {
+ 137   1          //-------------------------------------------------------------------------
+ 138   1          Ext_Cb0 = 0xFF;
+ 139   1          Ccb42   = 0x00;
+ 140   1          //-------------------------------------------------------------------------
+ 141   1          Ext_Cb2.byte = EXT_CB2_INIT;    /* Update Ext_Cb3 a little further down */
+ 142   1          Led_Data = 0x00;
+ 143   1          Gen_Info = 0;       /* Clear general control. */
+ 144   1          Pass_On  = 0;       /* Password enable send code. */
+ 145   1          Pass_Off = 0;       /* Password disable send code. */
+ 146   1          Pass_Make1 = 0;     /* Reject make code 1. */
+ 147   1          Pass_Make2 = 0;     /* Reject make code 2. */
+ 148   1          scan.kbf_tail = 0;
+ 149   1          scan.kbf_head = 0;
+ 150   1          F_Service_UNLOCK = 1;       /* Post unlock service request. */
+ 151   1          Enable_Timer_A();           /* Load Timer A if not already enabled. */
+ 152   1          //-------------------------------------------------------------------------
+ 153   1      }
+ 154          //-----------------------------------------------------------------------------
+ 155          
+ 156          //-----------------------------------------------------------------------------
+ 157          // FUNCTION:   general_reset1, general_reset2
+ 158          // Initialize things common to both Cold/Warm reset.
+ 159          //-----------------------------------------------------------------------------
+ 160          static void Common_Reset(void)
+ 161          {
+ 162   1          Service  = 0;       /* Clear service requests */
+ 163   1          Service1 = 0;
+ 164   1      
+ 165   1          SCI_Event_In_Index  = 0;
+ 166   1          SCI_Event_Out_Index = 0;
+ 167   1          SMI_Event_In_Index  = 0;
+ 168   1          SMI_Event_Out_Index = 0;
+ 169   1      
+ 170   1          Timer_A.byte  = 0;  /* Clear Timer A events */
+ 171   1          Timer_B.byte  = 0;  /* Clear Timer B events */
+ 172   1      
+ 173   1          Scanner_State = 0;  /* Clear scanner state */
+ 174   1      
+ 175   1      }
+ 176          //-----------------------------------------------------------------------------
+ 177          
+ 178          //-----------------------------------------------------------------------------
+ 179          // FUNCTION: Init_PS2 - Initialize the PS2 Port variables.
+C51 COMPILER V7.06   CORE_INIT                                                             07/06/2010 09:59:43 PAGE 4   
+
+ 180          //-----------------------------------------------------------------------------
+ 181          void Init_PS2(void)
+ 182          {
+ 183   1          PS2_IRQ_Channel = 0xFF; 
+ 184   1          PS2_SSIRQ_Channel = 0xFF; 
+ 185   1      }
+ 186          //-----------------------------------------------------------------------------
+ 187          
+ 188          //-----------------------------------------------------------------------------
+ 189          // The function of DMA for scratch sram
+ 190          //
+ 191          //-----------------------------------------------------------------------------
+ 192          const sDMAScratchSRAM code asDMAScratchSRAM[]=
+ 193          {
+ 194              { &SCAR1H, &SCAR1M, &SCAR1L },  //1024bytes(externl ram 0x800~BFF)
+ 195              { &SCAR2H, &SCAR2M, &SCAR2L },  // 512bytes(externl ram 0xC00~DFF)
+ 196              { &SCAR3H, &SCAR3M, &SCAR3L },  // 256bytes(externl ram 0xE00~EFF)
+ 197              { &SCAR4H, &SCAR4M, &SCAR4L }   // 256bytes(externl ram 0xF00~FFF)
+ 198          
+ 199          };
+ 200          //-----------------------------------------------------------------------------
+ 201          void  CacheDma( BYTE sramnum, WORD addr )
+ 202          {
+ 203   1          *asDMAScratchSRAM[sramnum].scarh = 0x80;
+ 204   1          /* high byte of function address.   */
+ 205   1          *asDMAScratchSRAM[sramnum].scarm = (WORD) addr >> 8;
+ 206   1          /* low byte of function address.    */
+ 207   1          *asDMAScratchSRAM[sramnum].scarl = (WORD) addr & 0xff;
+ 208   1          /* start cache dma                  */
+ 209   1          *asDMAScratchSRAM[sramnum].scarh = 0x00;
+ 210   1      
+ 211   1      }
+ 212          //-----------------------------------------------------------------------------
+ 213          
+ 214          //-----------------------------------------------------------------------------
+ 215          // Init. DMA for scratch sram
+ 216          //
+ 217          // Segment 4: Don' use 0xF00 ~ 0xFFF (used by C compiler)
+ 218          //-----------------------------------------------------------------------------
+ 219          void Init_Cache(void)
+ 220          {
+ 221   1          // Dino for 8500
+ 222   1      }
+ 223          //-----------------------------------------------------------------------------
+ 224          
+ 225          //*****************************************************************************
+ 226          // INIT END HERE ......
+ 227          //*****************************************************************************
+ 228          
+ 229          /*-----------------------------------------------------------------------------
+ 230           * End
+ 231           *---------------------------------------------------------------------------*/
+ 232          
+ 233          
+C51 COMPILER V7.06   CORE_INIT                                                             07/06/2010 09:59:43 PAGE 5   
+
+ASSEMBLY LISTING OF GENERATED OBJECT CODE
+
+
+             ; FUNCTION Reset_Initialization (BEGIN)
+                                           ; SOURCE LINE # 20
+                                           ; SOURCE LINE # 21
+                                           ; SOURCE LINE # 23
+0000 120000      E     LCALL   Init_GPIO
+                                           ; SOURCE LINE # 34
+0003 120000      R     LCALL   Init_Regs
+                                           ; SOURCE LINE # 35
+0006 120000      E     LCALL   Init_Timers
+                                           ; SOURCE LINE # 36
+0009 120000      E     LCALL   Init_Kbd
+                                           ; SOURCE LINE # 37
+000C 120000      R     LCALL   Cold_Reset
+                                           ; SOURCE LINE # 38
+000F 120000      R     LCALL   Common_Reset
+                                           ; SOURCE LINE # 39
+0012 120000      R     LCALL   Init_PS2
+                                           ; SOURCE LINE # 40
+0015 120000      R     LCALL   Init_Cache
+                                           ; SOURCE LINE # 41
+0018 020000      E     LJMP    OEM_ColdResetInit
+             ; FUNCTION Reset_Initialization (END)
+
+             ; FUNCTION vInitEnableInterrupt (BEGIN)
+                                           ; SOURCE LINE # 68
+                                           ; SOURCE LINE # 69
+                                           ; SOURCE LINE # 70
+0000 D2AA              SETB    EX1
+                                           ; SOURCE LINE # 71
+0002 020000      E     LJMP    EnableAllInterrupt
+             ; FUNCTION vInitEnableInterrupt (END)
+
+             ; FUNCTION Init_Regs (BEGIN)
+                                           ; SOURCE LINE # 117
+                                           ; SOURCE LINE # 118
+                                           ; SOURCE LINE # 119
+;---- Variable 'index' assigned to Register 'R7' ----
+0000 E4                CLR     A
+0001 FF                MOV     R7,A
+0002         ?C0003:
+                                           ; SOURCE LINE # 121
+                                           ; SOURCE LINE # 122
+                                           ; SOURCE LINE # 123
+0002 EF                MOV     A,R7
+0003 75F003            MOV     B,#03H
+0006 A4                MUL     AB
+0007 2400        R     ADD     A,#LOW reg_init_table
+0009 F582              MOV     DPL,A
+000B E4                CLR     A
+000C 3400        R     ADDC    A,#HIGH reg_init_table
+000E F583              MOV     DPH,A
+0010 E4                CLR     A
+0011 93                MOVC    A,@A+DPTR
+0012 FC                MOV     R4,A
+0013 7401              MOV     A,#01H
+0015 93                MOVC    A,@A+DPTR
+0016 FD                MOV     R5,A
+0017 7800        E     MOV     R0,#LOW Tmp_XPntr
+0019 EC                MOV     A,R4
+C51 COMPILER V7.06   CORE_INIT                                                             07/06/2010 09:59:43 PAGE 6   
+
+001A F6                MOV     @R0,A
+001B 08                INC     R0
+001C ED                MOV     A,R5
+001D F6                MOV     @R0,A
+                                           ; SOURCE LINE # 124
+001E EF                MOV     A,R7
+001F 75F003            MOV     B,#03H
+0022 A4                MUL     AB
+0023 2400        R     ADD     A,#LOW reg_init_table+02H
+0025 F582              MOV     DPL,A
+0027 E4                CLR     A
+0028 3400        R     ADDC    A,#HIGH reg_init_table+02H
+002A F583              MOV     DPH,A
+002C E4                CLR     A
+002D 93                MOVC    A,@A+DPTR
+002E 8D82              MOV     DPL,R5
+0030 8C83              MOV     DPH,R4
+0032 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 125
+0033 0F                INC     R7
+                                           ; SOURCE LINE # 126
+0034 EF                MOV     A,R7
+0035 B416CA            CJNE    A,#016H,?C0003
+                                           ; SOURCE LINE # 128
+0038         ?C0005:
+0038 22                RET     
+             ; FUNCTION Init_Regs (END)
+
+             ; FUNCTION Cold_Reset (BEGIN)
+                                           ; SOURCE LINE # 135
+                                           ; SOURCE LINE # 136
+                                           ; SOURCE LINE # 138
+0000 7500FF      E     MOV     Ext_Cb0,#0FFH
+                                           ; SOURCE LINE # 139
+0003 E4                CLR     A
+0004 F500        E     MOV     Ccb42,A
+                                           ; SOURCE LINE # 141
+0006 7800        E     MOV     R0,#LOW Ext_Cb2
+0008 7622              MOV     @R0,#022H
+                                           ; SOURCE LINE # 142
+000A F500        E     MOV     Led_Data,A
+                                           ; SOURCE LINE # 143
+000C F500        E     MOV     Gen_Info,A
+                                           ; SOURCE LINE # 144
+000E 900000      E     MOV     DPTR,#Pass_On
+0011 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 145
+0012 900000      E     MOV     DPTR,#Pass_Off
+0015 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 146
+0016 900000      E     MOV     DPTR,#Pass_Make1
+0019 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 147
+001A 900000      E     MOV     DPTR,#Pass_Make2
+001D F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 148
+001E E500        E     MOV     A,scan
+0020 540F              ANL     A,#0FH
+0022 F500        E     MOV     scan,A
+                                           ; SOURCE LINE # 149
+0024 54F0              ANL     A,#0F0H
+0026 F500        E     MOV     scan,A
+C51 COMPILER V7.06   CORE_INIT                                                             07/06/2010 09:59:43 PAGE 7   
+
+                                           ; SOURCE LINE # 150
+0028 D200        E     SETB    F_Service_UNLOCK
+                                           ; SOURCE LINE # 151
+002A 020000      E     LJMP    Enable_Timer_A
+             ; FUNCTION Cold_Reset (END)
+
+             ; FUNCTION Common_Reset (BEGIN)
+                                           ; SOURCE LINE # 160
+                                           ; SOURCE LINE # 161
+                                           ; SOURCE LINE # 162
+0000 E4                CLR     A
+0001 F500        E     MOV     Service,A
+                                           ; SOURCE LINE # 163
+0003 F500        E     MOV     Service1,A
+                                           ; SOURCE LINE # 165
+0005 900000      E     MOV     DPTR,#SCI_Event_In_Index
+0008 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 166
+0009 900000      E     MOV     DPTR,#SCI_Event_Out_Index
+000C F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 167
+000D 900000      E     MOV     DPTR,#SMI_Event_In_Index
+0010 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 168
+0011 900000      E     MOV     DPTR,#SMI_Event_Out_Index
+0014 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 170
+0015 F500        E     MOV     Timer_A,A
+                                           ; SOURCE LINE # 171
+0017 F500        E     MOV     Timer_B,A
+                                           ; SOURCE LINE # 173
+0019 F500        E     MOV     Scanner_State,A
+                                           ; SOURCE LINE # 175
+001B 22                RET     
+             ; FUNCTION Common_Reset (END)
+
+             ; FUNCTION Init_PS2 (BEGIN)
+                                           ; SOURCE LINE # 181
+                                           ; SOURCE LINE # 182
+                                           ; SOURCE LINE # 183
+0000 7800        E     MOV     R0,#LOW PS2_IRQ_Channel
+0002 76FF              MOV     @R0,#0FFH
+                                           ; SOURCE LINE # 184
+0004 7800        E     MOV     R0,#LOW PS2_SSIRQ_Channel
+0006 76FF              MOV     @R0,#0FFH
+                                           ; SOURCE LINE # 185
+0008 22                RET     
+             ; FUNCTION Init_PS2 (END)
+
+             ; FUNCTION _CacheDma (BEGIN)
+                                           ; SOURCE LINE # 201
+0000 900000      R     MOV     DPTR,#addr
+0003 EC                MOV     A,R4
+0004 F0                MOVX    @DPTR,A
+0005 A3                INC     DPTR
+0006 ED                MOV     A,R5
+0007 F0                MOVX    @DPTR,A
+;---- Variable 'sramnum' assigned to Register 'R3' ----
+0008 AB07              MOV     R3,AR7
+                                           ; SOURCE LINE # 202
+                                           ; SOURCE LINE # 203
+000A EB                MOV     A,R3
+C51 COMPILER V7.06   CORE_INIT                                                             07/06/2010 09:59:43 PAGE 8   
+
+000B 75F006            MOV     B,#06H
+000E A4                MUL     AB
+000F 2400        R     ADD     A,#LOW asDMAScratchSRAM
+0011 F582              MOV     DPL,A
+0013 E4                CLR     A
+0014 3400        R     ADDC    A,#HIGH asDMAScratchSRAM
+0016 F583              MOV     DPH,A
+0018 E4                CLR     A
+0019 93                MOVC    A,@A+DPTR
+001A FE                MOV     R6,A
+001B 7401              MOV     A,#01H
+001D 93                MOVC    A,@A+DPTR
+001E F582              MOV     DPL,A
+0020 8E83              MOV     DPH,R6
+0022 7480              MOV     A,#080H
+0024 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 205
+0025 900000      R     MOV     DPTR,#addr
+0028 E0                MOVX    A,@DPTR
+0029 FF                MOV     R7,A
+002A EB                MOV     A,R3
+002B 75F006            MOV     B,#06H
+002E A4                MUL     AB
+002F 2400        R     ADD     A,#LOW asDMAScratchSRAM+02H
+0031 F582              MOV     DPL,A
+0033 E4                CLR     A
+0034 3400        R     ADDC    A,#HIGH asDMAScratchSRAM+02H
+0036 F583              MOV     DPH,A
+0038 E4                CLR     A
+0039 93                MOVC    A,@A+DPTR
+003A FC                MOV     R4,A
+003B 7401              MOV     A,#01H
+003D 93                MOVC    A,@A+DPTR
+003E F582              MOV     DPL,A
+0040 8C83              MOV     DPH,R4
+0042 EF                MOV     A,R7
+0043 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 207
+0044 900000      R     MOV     DPTR,#addr+01H
+0047 E0                MOVX    A,@DPTR
+0048 FF                MOV     R7,A
+0049 EB                MOV     A,R3
+004A 75F006            MOV     B,#06H
+004D A4                MUL     AB
+004E 2400        R     ADD     A,#LOW asDMAScratchSRAM+04H
+0050 F582              MOV     DPL,A
+0052 E4                CLR     A
+0053 3400        R     ADDC    A,#HIGH asDMAScratchSRAM+04H
+0055 F583              MOV     DPH,A
+0057 E4                CLR     A
+0058 93                MOVC    A,@A+DPTR
+0059 FC                MOV     R4,A
+005A 7401              MOV     A,#01H
+005C 93                MOVC    A,@A+DPTR
+005D F582              MOV     DPL,A
+005F 8C83              MOV     DPH,R4
+0061 EF                MOV     A,R7
+0062 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 209
+0063 EB                MOV     A,R3
+0064 75F006            MOV     B,#06H
+0067 A4                MUL     AB
+C51 COMPILER V7.06   CORE_INIT                                                             07/06/2010 09:59:43 PAGE 9   
+
+0068 2400        R     ADD     A,#LOW asDMAScratchSRAM
+006A F582              MOV     DPL,A
+006C E4                CLR     A
+006D 3400        R     ADDC    A,#HIGH asDMAScratchSRAM
+006F F583              MOV     DPH,A
+0071 E4                CLR     A
+0072 93                MOVC    A,@A+DPTR
+0073 FE                MOV     R6,A
+0074 7401              MOV     A,#01H
+0076 93                MOVC    A,@A+DPTR
+0077 F582              MOV     DPL,A
+0079 8E83              MOV     DPH,R6
+007B E4                CLR     A
+007C F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 211
+007D 22                RET     
+             ; FUNCTION _CacheDma (END)
+
+             ; FUNCTION Init_Cache (BEGIN)
+                                           ; SOURCE LINE # 219
+                                           ; SOURCE LINE # 220
+                                           ; SOURCE LINE # 222
+0000 22                RET     
+             ; FUNCTION Init_Cache (END)
+
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    298    ----
+   CONSTANT SIZE    =     90    ----
+   XDATA SIZE       =   ----       2
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,194 @@
+html,body{height: 100%}
+#small-robot-div a {
+    color: #569de1;
+}
+.clearfix {
+       zoom: 1;   
+}
+.clearfix:after {
+       display: block;
+       content: "";
+       clear: both;
+       visibility: hidden;
+       height: 0;
+       font-size: 0;
+       overflow: hidden;
+}
+.fl{float: left;}
+.fr{float: right;}
+#small-robot-div {
+	position: fixed;
+	right: 0px;
+	top: 0px;
+	z-index: 999999;
+	width: 0;
+	height: 100%;
+	background: #eceaea;
+	border-left: 6px solid #fafafa;
+	font-family:"微软雅黑";
+}
+#small-robot-input-div {
+
+	display: none;
+}
+/*
+#small-robot-input-box {
+	border: 2px solid #40a2f3;
+	background-color:#f1f7fc;
+}*/
+
+#small-robot-output-div {
+	position: absolute;
+	display: none;
+	min-width: 280px
+}
+
+#small-robot-output-inside-div {
+	overflow-y: hidden;
+}
+
+/*#small-robot-closeBtn-div {
+	position: absolute;
+	cursor: pointer;
+	color: #993300;
+}*/
+
+#small-robot-closeBtn-div:hover {
+	color: #FF3333;
+}
+
+.small-robot-show-div {
+	margin: 5px;
+	display: block;
+	clear: both;
+	font-size: 12px;
+	word-wrap: break-word;
+	word-break: normal; 
+	line-height:150%;
+}
+
+.small-robot-left-div {
+	float:left;
+	margin-left: 10px;
+	margin-top: 10px;
+	*float:none;
+	*display:inline-block;
+}
+
+.small-robot-right-div {
+	float:right;
+	margin-right: 10px;
+	margin-top: 10px;
+}
+.small-robot-close{
+	background-image: url("../images/closeBtn.png");
+}
+.small-robot-logo{
+	background-image: url("../images/logo.png");
+}
+.small-robot-face{
+	background-image: url("../images/face.gif");
+}
+.small-robot-send{
+	background-image: url("../images/send.png");
+}
+.fold_robot_head{margin:0 10px;height: 40px;line-height: 40px;border-bottom: 2px solid #68aef0;min-width: 280px}
+.fold_robot_head .fold_robot_title{display: inline-block;}
+.fold_robot_head .fold_robot_title>i{width: 30px;height: 30px;display: inline-block;background: url("../images/robot_icon.png") no-repeat 0 0;margin-top:5px }
+.fold_robot_head .fold_robot_title em{display:inline-block; height: 40px;font: 16px/40px "微软雅黑";vertical-align: top;margin-left:8px;}
+.fold_robot_head .fold_robot_close{width: 12px;height: 12px; transition: transform 0.2s ease-out 0s;/*float: right;*/background: url("../images/robot_icon.png") no-repeat 0 -137px;display: inline-block;/*margin-top:14px;*/margin-top: 13px;margin-left:110px;  cursor: pointer; }
+.fold_robot_head .fold_robot_close:hover{transform:rotate(180deg);}
+.fold_robot_foot{position: absolute;bottom:0;width: 100%}
+.fold_robot_foot textarea{height: 60px;width: 279px;word-break: break-all;overflow: hidden;
+    word-wrap: break-word;resize: none;border: none;border-left: 1px solid #eceaea;min-width: 279px;padding: 10px;font-size: 12px; line-height: 18px}
+.fold_robot_foot #small-robot-btn-div{width: 100%;height: 32px; display: inline-block;background: #68aef0;color: #fff;text-align: center;font:16px/40px "微软雅黑"; line-height: 32px;font-size: 14px;cursor: pointer;min-width: 100px}
+#small-robot-btn-div:hover{background:#6ab6fe };
+.fold_robot_content_mess{ margin:17px 10px;;}
+.fold_robot_content_mess>i{background: url("../images/robot_icon.png") no-repeat -48px -134px;display: inline-block;width: 7px;height: 14px; margin-top: 8px;
+    vertical-align: top;float: left}
+.fold_robot_content_mess span.fold_robot_content_mess_con{background: #fff;border-radius: 6px;padding: 10px 12px; ;display: inline-block; max-width: 202px;word-break: break-all;word-wrap: break-word;float: left;font-size: 12px;text-align: left;letter-spacing: 1px;}
+.fold_robot_content_mess span.fold_robot_content_mess_title{display: block;margin: 5px;/*color: #3db8f1;*/font-size: 12px;}
+.fold_robot_content_mess.r{}
+.fold_robot_content_mess.r>i{background: url("../images/robot_icon.png") no-repeat  0px -256px;display: inline-block;width: 7px;height: 14px;float: right;}
+.fold_robot_content_mess.r>span.fold_robot_content_mess_con{background: #68aef0;border-radius: 6px;color:#fff; float: right;}
+.fold_robot_content_mess.r>span.fold_robot_content_mess_title{display: block;margin: 5px;color: #68aef0;text-align: right;}
+.fontColor{color: #757575}
+/***弹出框*/
+.window_content{position: fixed;top: 50%;left: 50%;
+	box-shadow: 0 0 20px #333;
+	z-index: 999999;
+	background: #fff;
+	border: 1px solid #ccc;
+
+    /*filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#cccccc', endColorstr='#cccccc',GradientType=1 );*/
+    /* For IE 8 */
+    -ms-filter: "progid:DXImageTransform.Microsoft.Shadow(Strength=10, Direction=135, Color='#333333')";
+    /* For IE 5.5 - 7 */
+    filter: progid:DXImageTransform.Microsoft.Shadow(Strength=10, Direction=135, Color='#333333');	
+}
+.window_content iframe{
+	width: 100%;border:none;
+
+}
+.window_close{position: relative;float: right; top:0px;right: 0px;width: 100%;height: 40px;text-align: center;
+	background: #eceaea 
+}
+.window_close i.top_l{float: left;
+	background: url("../images/robot_icon.png") no-repeat scroll 0 0;
+   display: inline-block;
+    float: left;
+    height: 30px;
+    margin-left: 5px;
+    margin-top: 5px;
+    width: 30px;
+    }
+.window_close i.top_r{ cursor: pointer;
+    display: inline-block;
+    float: right;
+    height: 22px;
+    margin-right: 5px;
+    margin-top: 7px;
+    transition: transform 0.2s ease-out 0s;
+    width: 22px;background: url("../images/robot_icon.png") no-repeat 0px -74px;
+}
+.window_close i.top_r:hover{transform:rotate(180deg);}
+.window_close span {
+    color: #4d4d4d;
+    font-family: 微软雅黑;
+    height: 40px;
+    letter-spacing: 1px;
+    line-height: 40px;
+    margin-left: 5px;
+}
+/***提示语句样式***/
+.send_tips {
+    background: #fff none repeat scroll 0 0;
+    border-radius: 3px;
+    bottom: 115px;
+    left: 5px;
+    list-style: outside none none;
+    position: absolute;
+    width: 260px;
+    border-bottom: 1px solid #ccc;
+    box-shadow: 0 2px 5px #ccc
+}
+li.send_tips_li {
+    line-height: 23px;
+    font-size: 12px;
+    overflow: hidden;
+    padding: 0 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+li.send_tips_li.active{
+	box-shadow: 0px 0px 2px #51a8fe;
+	background:  #51a8fe;
+	color: #fff
+}
+
+.button_robot {
+    bottom: 0;
+    position: fixed;
+    right: 9px;
+}

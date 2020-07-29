@@ -1,0 +1,827 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!-- saved from url=(0049)https://iknow.lenovo.com.cn/detail/dc_076023.html -->
+<html xmlns="http://www.w3.org/1999/xhtml" class="desktop landscape" data-find="_8"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <!--<base target="_blank">--><base href="." target="_blank">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="”renderer”" content="”webkit|ie-comp|ie-stand”">
+    <title id="lenovo-title">笔记本电源管理芯片(EC)作用的介绍 -联想知识库</title>
+    <script type="text/javascript" async="" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/75bc0273.js"></script><script src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/hm.js"></script><script src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/hm(1).js"></script><script type="text/javascript" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/jquery-1.11.3.min.js"></script>
+    <script type="text/javascript" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/device.min.js"></script>
+    <script type="text/javascript" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/core.js"></script>
+    <script type="text/javascript">
+      var paramter = getUrlParamArr();
+      if (device.mobile()) {
+        window.location =
+          "/app/detail/" + paramter[0] + "_" + paramter[1] + ".html";
+      }
+    </script>
+    <meta name="keywords" content="笔记本,电源管理,芯片,EC,作用-联想知识库">
+    <meta name="description" content="笔记本电源管理芯片(EC)作用的介绍。&amp;#13;&amp;#10;">
+    <link rel="stylesheet" type="text/css" href="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/reset1.css">
+    <link rel="stylesheet" type="text/css" href="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/utilDetails.css">
+    <link rel="stylesheet" type="text/css" href="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/utildetail.css">
+    <link rel="stylesheet" href="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/share.min.css">
+    <script src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/jquery.js"></script>
+    <script src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/jquery.share.min.js"></script>
+    <style>
+      .knowledgeDetail ul {
+        margin: 0 0 10px 25px;
+      }
+      .btnWrapper {
+        padding-top: 30px;
+      }
+      .pointwarp {
+        border: 1px solid #ddd;
+        padding: 5px 20px;
+        border-radius: 20px;
+        width: 200px;
+        display: flex;
+        justify-content: space-between;
+        color: #333;
+        font-size: 12px;
+      }
+      .pointwarp span:first-child,
+      .pointwarp span:last-child {
+        display: flex;
+        align-items: center;
+        margin: 0 10px;
+        width: 60px;
+        justify-content: space-between;
+      }
+      .pop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        background: rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        width: 100%;
+        height: 100%;
+        display: none;
+      }
+      .popcontent {
+        width: 400px;
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        background: #fff;
+        border-radius: 10px;
+        padding: 20px;
+      }
+      .p_c_title {
+        line-height: 40px;
+        font-size: 16px;
+        font-weight: bold;     
+       }
+      .p_c_content {
+        margin-top: 20px;
+      }
+      .p_c_content textarea {
+        width: 100%;
+        height: 100px;
+        background-color: transparent;
+        border-radius: 6px;
+        border: 1px solid #bbb;
+        padding: 10px;
+        box-sizing: border-box;
+      }
+      .z_code {
+        margin-top: 20px;
+        height: 40px;
+        line-height: 40px;
+        font-size: 14px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .z_code input {
+        width: 100px;
+        height: 30px;
+        background-color: transparent;
+        outline: none;
+        border-radius: 3px;
+        border: 1px solid #bbb;
+      }
+      .p_bottom {
+        margin: 30px 0 10px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+      }
+      .p_bottom .p_close {
+        width: 80px;
+        height: 30px;
+        background: #fff;
+        border: 1px solid #999999;
+        border-radius: 3px;
+        text-align: center;
+        line-height: 30px;
+        color: #333;
+        font-size: 16px;
+      }
+      .p_bottom .p_sure {
+        width: 80px;
+        height: 30px;
+        background: #3189ec;
+        border: 1px solid #3189ec;
+        border-radius: 3px;
+        text-align: center;
+        line-height: 30px;
+        color: #fff;
+        font-size: 16px;
+      }
+      .popclose{
+        position: absolute;
+        top: 5px;
+        right: 10px;
+        font-size: 16px;
+        color: #ddd;
+        cursor: pointer;
+      }
+    </style>
+  <link rel="SHORTCUT ICON" href="http://www.lenovo.com.cn/favicon.ico"><script type="text/javascript" async="" id="getcookie_id" charset="utf-8" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/getcookie.js.php"></script></head>
+  <body data-find="_7"><div class="site new_site fr fix header-login"><span class="login-link user_icon png" id="loginuserinfo"><div class="detailBox" id="detailBox" style="width:240px;max-height: 400px;border: 1px solid #ccc;display: none;overflow: auto;position:absolute;top:26px;background-color:#eee;"><ul id="UBox"></ul> </div></span></div><div class="drop-win"><div class="login-drop"><div class="close-popwin">x</div>登录联想账号</div><div id="new_drop_main"></div></div>
+    <div class="header" id="head"><div class="loginRegistHead">
+    <div class="content clearfix">
+        <div class="header_top_wrap_left">
+            <ul>
+                <li><a class="new_a" href="http://service.lenovo.com.cn/" data-pos="categorys_1_1">联想服务</a></li>
+                <li><a class="new_a" href="http://think.lenovo.com.cn/" data-pos="categorys_1_1">Think服务</a></li>
+                <li><a class="new_a" href="http://service.lenovo.com.cn/VipService/Classic/Html/ClassicIndex.html" data-pos="categorys_1_1">大客户服务</a></li>
+                <li><a class="chat_link" onmouseover="Util.showqrcode()" onmouseout="Util.hideqrcode()" href="javascript:void(0);" data-pos="categorys_1_1">官方微信<div class="authority_chat_img" style="display: none; height: 127px; padding-top: 0px; margin-top: 0px; padding-bottom: 0px; margin-bottom: 0px;"></div></a></li>
+                <li>
+                    <a class="new_a" href="http://www.lenovo.com.cn/">联想官网</a>
+                </li>
+            </ul>
+        </div>
+        <div class="header_top_wrap_right">
+            <ul>
+                <div class="unlogin">
+                    <li class="unloginLinkLi">
+                        <a href="https://iknow.lenovo.com.cn/detail/dc_076023.html" id="headLogin" class="listen_btn" data-pos="categorys_1_2">登录/注册</a>
+                        </li>
+                        <!-- <li class="header_top_wrap_between unloginLinkLi">|</li>
+                    <li class="unloginLinkLi">
+                        <a href="" id="headRegister" class="listen_btn" data-pos="categorys_1_3">注册</a> -->
+                        
+                        <li class="loginLinkLi hidden"><span class="person_icon"></span></li>
+                        <li class="loginLinkLi hidden" id="userNameText">Hi : '+username+'</li>
+                        <li class="left_margin my_center loginLinkLi hidden" id="my_center" onmouseover="Util.showPersonCenter()" onmouseout="Util.hidePersonCenter()">个人中心<span class="v_center_arrow"></span>
+                            <div class="my_service_list">
+                                <div class="top_icon"></div>
+                                <ul class="ul_list">
+                                    <li><a href="http://service.lenovo.com.cn/lenovo/wsi/usercenternew/userproduct/default.aspx">我的联想服务</a>
+                                    </li>
+                                    <li><a href="http://think.lenovo.com.cn/LenovoIDUserIndex.aspx">我的think服务</a></li>
+                                    <li><a href="javascript:void(0);" onclick="goPersonCenter()">我的知识库</a></li>
+                                    <li><a href="http://videoservice.lenovo.com.cn/PCWeb/videoweb/pages/userInfo.html">我的微视频</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+                        <li class="left_margin loginLinkLi hidden"><a href="https://iknow.lenovo.com.cn/detail/dc_076023.html" id="headExit">退出</a>
+                        </li>
+                    </div>
+                </ul>
+            </div>
+            <!--<a href="" id="headRegister">注册</a>
+        <span class="line nologinline">|</span>
+        <a href="" id="headLogin"><?php echo 56; ?>登录</a>
+        <a href="" id="headExit" class="hidden">退出</a>
+        
+        <span class="line loginline hidden">|</span>
+        <a href="javascript:void(0);" class="hidden" onclick="goPersonCenter()" id="headPersonCenter">个人中心</a>
+        <span class="line loginline hidden">|</span>
+        <a href="javascript:void(0);" class="hidden" id="userNameText">欢迎您：<span></span></a>
+        <span class="line">|</span>
+        <a href="http://service.lenovo.com.cn/lenovo/wsi/index.html">联想服务官网</a>
+        <span class="line">|</span>
+        <a href="http://www.lenovo.com.cn/">联想商城</a>-->
+        </div>
+    </div>
+
+    <!-- 扫码登录  wangxue  2017-10-26 -->
+    <div class="drop-win">
+        <div class="login-drop">
+            <div class="close-popwin">x</div>
+            登录联想账号
+        </div>
+        <div id="new_drop_main"></div>
+    </div>
+    <!-- 扫码登录-->
+
+    <div class="headContent">
+        <div class="headTop clearfix">
+            <div class="queryBox">
+                <input type="text" class="text" value="输入关键字或文章编号" onfocus="if(this.value==&#39;输入关键字或文章编号&#39;)this.value=&#39;&#39;;" onblur="if(this.value==&#39;&#39;)this.value=&#39;输入关键字或文章编号&#39;;" id="keyWordText" onkeydown="if (event.keyCode == 13) {queryKnowledgeByKey();}">
+                <a href="javascript:void(0);" class="queryBtn" onclick="queryKnowledgeByKey()"></a>
+            </div>
+            <a href="https://iknow.lenovo.com.cn/" class="logoCon">
+                <img src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/logo.jpg" class="logo">
+                <span>联想知识库</span>
+            </a>
+        </div>
+        <div class="clearfix">
+            <!--<div class="loginRegistBtn">
+            <a id="headLogin" href=""><?php echo 56; ?>登录</a>
+
+            <span id="loginRegistLine"> | </span>
+            <a id="headRegister" href="">注册</a>
+            <span class="userNameText hidden" onclick="goPersonCenter()" onmouseover="Util.showExit()" onmouseout="Util.hideExit()">
+                <span id="userNameText" class="hidden"></span>
+                <a id="headExit" class="hidden" href="">退出</a>
+            </span>
+
+        </div>-->
+            <a href="https://iknow.lenovo.com.cn/" class="indexNav">首页</a>
+            <ul class="navList fl">
+                
+                <li class="navContent" id="id2" onmouseover="Util.showSubList(&#39;id2&#39;)" onmouseout="Util.hideSubList(&#39;id2&#39;)">
+                    <a href="https://iknow.lenovo.com.cn/topic/p_2.html">Lenovo笔记本</a>
+                    <div class="subnav hidden">
+                        <span></span>
+                        <dl>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_57.html">小新</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_58.html">拯救者</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_59.html">Miix系列</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_60.html">Flex系列</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_56.html">Yoga系列</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_36.html">Y系列</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_52.html">Z系列</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_53.html">U系列</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_54.html">S系列</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_55.html">G系列</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/topic/p_2.html">查看全部</a></dd>
+
+                            
+                        </dl>
+                    </div>
+                </li>
+                
+                <li class="navContent" id="id19" onmouseover="Util.showSubList(&#39;id19&#39;)" onmouseout="Util.hideSubList(&#39;id19&#39;)">
+                    <a href="https://iknow.lenovo.com.cn/topic/p_19.html">Lenovo台式机</a>
+                    <div class="subnav hidden">
+                        <span></span>
+                        <dl>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_4.html">IdeaCentre A系列</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_61.html">IdeaCentre B系列</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_62.html">IdeaCentre C系列</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_66.html">Lenovo H系列</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_63.html">Erazer D系列</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_68.html">Erazer X系列</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_64.html">Lenovo G系列</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_65.html">开天</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_67.html">启天</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_116.html">扬天</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/topic/p_19.html">查看全部</a></dd>
+
+                            
+                        </dl>
+                    </div>
+                </li>
+                
+                <li class="navContent" id="id42" onmouseover="Util.showSubList(&#39;id42&#39;)" onmouseout="Util.hideSubList(&#39;id42&#39;)">
+                    <a href="https://iknow.lenovo.com.cn/topic/p_42.html">ThinkPad</a>
+                    <div class="subnav hidden">
+                        <span></span>
+                        <dl>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_34.html">ThinkPad T</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_69.html">ThinkPad X</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_70.html">ThinkPad Edge</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_75.html">ThinkPad W</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_74.html">ThinkPad S</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_73.html">ThinkPad L</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_71.html">ThinkPad Tablet</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_72.html">ThinkPad R</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_202.html">ThinkPad P</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_211.html">ThinkPad Mini</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/topic/p_42.html">查看全部</a></dd>
+
+                            
+                        </dl>
+                    </div>
+                </li>
+                
+                <li class="navContent" id="id24" onmouseover="Util.showSubList(&#39;id24&#39;)" onmouseout="Util.hideSubList(&#39;id24&#39;)">
+                    <a href="https://iknow.lenovo.com.cn/topic/p_24.html">ThinkCentre</a>
+                    <div class="subnav hidden">
+                        <span></span>
+                        <dl>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_29.html">E系列</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_76.html">M系列</a>
+                            </dd>
+                            
+                        </dl>
+                    </div>
+                </li>
+                
+                <li class="navContent" id="id1" onmouseover="Util.showSubList(&#39;id1&#39;)" onmouseout="Util.hideSubList(&#39;id1&#39;)">
+                    <a href="https://iknow.lenovo.com.cn/topic/p_1.html">联想手机</a>
+                    <div class="subnav hidden">
+                        <span></span>
+                        <dl>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_198.html">Moto系列</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_239.html">Lenovo系列</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_209.html">Andriod系统</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_210.html">iOS系统</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_83.html">VIBE Z</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_139.html">A系列</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_140.html">S系列</a>
+                            </dd>
+                            
+                        </dl>
+                    </div>
+                </li>
+                
+                <li class="navContent" id="id95" onmouseover="Util.showSubList(&#39;id95&#39;)" onmouseout="Util.hideSubList(&#39;id95&#39;)">
+                    <a href="https://iknow.lenovo.com.cn/topic/p_95.html">外设数码</a>
+                    <div class="subnav hidden">
+                        <span></span>
+                        <dl>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_143.html">打印机</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_197.html">小新打印机</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_212.html">投影仪</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_219.html">会议系统</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_236.html">票据打印机</a>
+                            </dd>
+                            
+                        </dl>
+                    </div>
+                </li>
+                
+                <li class="navContent" id="id96" onmouseover="Util.showSubList(&#39;id96&#39;)" onmouseout="Util.hideSubList(&#39;id96&#39;)">
+                    <a href="https://iknow.lenovo.com.cn/topic/p_96.html">服务器</a>
+                    <div class="subnav hidden">
+                        <span></span>
+                        <dl>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_149.html">ThinkServer</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_150.html">存储</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_151.html">高性能</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_152.html">云终端</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_153.html">万全</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_201.html">System x</a>
+                            </dd>
+                            
+                        </dl>
+                    </div>
+                </li>
+                
+                <li class="navContent" id="id203" onmouseover="Util.showSubList(&#39;id203&#39;)" onmouseout="Util.hideSubList(&#39;id203&#39;)">
+                    <a href="https://iknow.lenovo.com.cn/topic/p_203.html">智能设备</a>
+                    <div class="subnav hidden">
+                        <span></span>
+                        <dl>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_207.html">个人云存储</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_246.html">联想看家宝</a>
+                            </dd>
+                            
+                            <dd><a href="https://iknow.lenovo.com.cn/list/p_249.html">扫地机器人</a>
+                            </dd>
+                            
+                        </dl>
+                    </div>
+                </li>
+                
+                <li class="navContent">
+                    <a href="https://iknow.lenovo.com.cn/driver/driverquery" class="indexNav">
+                        <img src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/driveload.png" style="margin-top:17px" alt="驱动下载">
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div></div>
+    <div class="mainContent pb20" data-find="_6">
+      <div class="contentWra clearfix" data-find="_5">
+        <div class="leftMainWrapper" data-find="_4">
+          <div class="nowPositionBox clearfix">
+            <a href="https://iknow.lenovo.com.cn/"><span class="allType">所有分类</span></a>
+            <span class="arrow">&gt;</span>
+            <a href="https://iknow.lenovo.com.cn/topic/c_2.html" id="firstNavStep" class="oneFlag"><span id="fristProductionName">随机软件</span></a>
+            <span class="arrow oneFlag">&gt;</span>
+            <a href="https://iknow.lenovo.com.cn/list/c_43.html" id="secondNavStep" class="twoFlag"><span id="subProductionName">电源管理</span></a>
+            <span class="arrow twoFlag">&gt;</span>
+            <span class="titleStep">笔记本电源管理芯片(EC)作用的介绍 </span>
+          </div>
+          <div class="banner" style="height:auto">
+            <ul id="adtop" class="slides"><li style="margin-top: 20px; width: 100%; float: left; margin-right: -100%; position: relative; opacity: 0; display: block; z-index: 1;" class=""><a style="display:block" target="_blank" href="http://t.lenovo.cn/YvQrQr"><img style="width:100%" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/1583715849.jpg" draggable="false"></a></li><li style="margin-top: 20px; width: 100%; float: left; margin-right: -100%; position: relative; opacity: 0; display: block; z-index: 1;" class=""><a style="display:block" target="_blank" href="http://t.lenovo.cn/uEVj2aPj"><img style="width:100%" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/1592554142.jpg" draggable="false"></a></li><li style="margin-top: 20px; width: 100%; float: left; margin-right: -100%; position: relative; opacity: 1; display: block; z-index: 2;" class="flex-active-slide"><a style="display:block" target="_blank" href="http://t.lenovo.cn/aU367f"><img style="width:100%" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/1565604561.jpg" draggable="false"></a></li></ul>
+          <ol class="flex-control-nav flex-control-paging"><li><a class="">1</a></li><li><a class="">2</a></li><li><a class="flex-active">3</a></li></ol><ul class="flex-direction-nav"><li><a class="flex-prev" href="https://iknow.lenovo.com.cn/detail/dc_076023.html#"></a></li><li><a class="flex-next" href="https://iknow.lenovo.com.cn/detail/dc_076023.html#"></a></li></ul></div>
+          <div class="knowledgeDetail" data-find="_3">
+            <div id="detailTplWrapper" data-find="_2">
+                    <span class="title">笔记本电源管理芯片(EC)作用的介绍 </span>
+                    <span class=""></span>
+
+                    <p class="createInfo clearfix">
+                        <img src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/avatar.jpg">
+                        <span class="username">Iknow</span>
+                        <span class="dot">.</span>
+                        <span class="time">2017-01-04 19:00</span>
+                        <span>|</span>
+                        <span id="doc_id" doc_id="23153">知识编号：</span>
+                        <span>076023</span>
+                    </p>
+                    <div class="content" data-find="_1">
+                        <p class="hidden">风险提示：</p>
+                        <font style="&#39;font-weight:bold;font-size:12pt;&#39;">操作步骤:</font><br><br><p>EC（Embed Controller，嵌入式控制器）是一个16位单片机，这是笔记本电脑中独具特色的部分，正是因为EC的使用，体现出了笔记本电脑与普通台式电脑的一个重要区别。</p><br><p>在台式电脑中，键盘和鼠标是独立与系统主机的，其一般标准的PS/2或USB端口与主机系统连接。而在笔记本电脑中，为了实现便携的目的。必然要使用内置键盘（矩阵译码型键盘）和内置鼠标（如触摸板、指点杆都属于内置鼠标设备）。为此我们需要专门的键盘控制器，笔记本的专用EC正是具备了这个功能。</p><br><p>而且，笔记本电脑设计的一个最重要的问题就是要使系统更加省电，增加电池的续航能力，既要有良好的散热性能，又要尽量减少系统的噪音，所以要根据温度，控制CPU风扇的停转。笔记本电脑的一些电源管理，如笔记本进入待机或关机模式，外部电源系统的电力调度。智能电池的电力检测，充放电任务。以及一些实用的快捷按纽。这些重要的功能都是由EC来完成的。</p><br><p>实际上，笔记本的EC是传统的KBC（Keyboard controller，键盘控制器）的延伸，它具备了KBC和嵌入式控制两个部分功能。</p><br><p>EC目前普遍应用在具备智能型节电功能的笔记本电脑设计中，它担负着笔记本内置键盘、触摸板（TOUCHPAD）、笔记本电池智能充放电管理以及温度监控等任务。 EC在笔记本电脑的便携、智能化、个性化设计中起到了重要的作用。</p><br><p>它内部本身也有一定容量的Flash来存储EC的代码。EC在系统中的地位绝不次于南北桥，在系统开启的过程中，EC控制着绝大多数重要信号的时序。在笔记本中，EC是一直开着的，无论你是在开机或者是关机状态，除非你把电池和Adapter完全卸除。</p><br><p>在关机状态下，EC一直保持运行，并在等待用户的开机信息。而在开机后，EC更作为键盘控制器，充电指示灯以及风扇等设备的控制，它甚至控制着系统的待机、休眠等状态。 现在的EC有两种架构，第一种：BIOS的FLASH通过X-BUS接到EC，然后EC通过LPC接到南桥，一般这种情况下EC的代码也是放在FLASH中的，也就是和BIOS共用一个FLASH。第二种：比较新的架构，EC和FLASH共同接到LPC总线上，一般它只使用EC内部的ROM。至于LPC总线，它是INTEL当初为了取代低速落后的X-BUS而推出的总线标准。</p><br><p>EC上一般都含有键盘控制器，所以也称KBC(Keyboard Controller)。</p><br><p><strong>那EC和BIOS在系统中的工作到底有什么牵连呢？</strong>在这里我们先简单的分析一下，具体的过程在本文的最后会详细介绍。</p><br><p>在系统关机的时候，只有RTC部分和EC部分在运行。RTC部分维持着计算机的时钟和CMOS设置信息，而EC则在等待用户按开机键。在检测到用户按开机键后，EC会通知整个系统把电源打开（这部分在最后详细介绍）。CPU被RESET后，会去读BIOS内一个特定地址内的指令（其实是一个跳转指令，这个地址是由CPU硬件设定的）。</p><br><p>这里开始分两种情况，对于第一种的结构：CPU发出的这个地址通过FSB到北桥，然后通过HUB-LINK到南桥，通过LPC到EC，再通过X-BUS一直到达BIOS。在CPU读到所发出的地址内的指令后，执行它被RESET后的第一个指令。在这个系统中，EC起到了桥接BIOS和南桥（或者说整个系统）的作用。</p><br><p>对于台式机而言，一般是不需要EC的。比如台式机本身的ATX电源就具有一定的智能功能，他已经能受操作系统控制来实现待机、休眠的状态；其次由于笔记本的键盘不能直接接到PS/2接口，而必须接到EC之上；还有就是笔记本有更多的小功能，比如充电指示灯、WIFI指示灯、Fn等很多特殊的功能，而且笔记本必须支持电池的充放电等功能，而智能充放电则需要EC的支持；另外，笔记本TFT屏幕的开关时序也必须由EC控制。这些原因导致了笔记本使用EC来做内部管理的必要性。</p><br><p>总体来说，EC和BIOS都处于机器的最底层。EC是一个单独的处理器，在开机前和开机过程中对整个系统起着全局的管理。而BIOS是在等EC把内部的物理环境初始化后才开始运行的。</p><br><p>看到这里，我想大家也明白EC到底是什么。如果说BIOS 是底层系统的话，那EC 似乎更加底层。在南桥上还有一个功能块就是电源管理单元（PM，Power Management）。一般来说，他和EC来共同配合完成。这里包括从开机（power button）键按下后，启动，待机，休眠，关机的全部功能。还包括对背光亮度，声音等的控制等等。至于现在Intel的Speed Step技术，也有部分功能是透过南桥来实现的（南桥发送SLP、STPCLK（sleep，Stop Clock）来实现睡眠、深睡眠等）。这部分的设计比较简单，只需要点到点的连接南桥和CPU即可。通过EC BIOS（底层软件部分）与EC芯片（硬件电路设计部分）的结合，可以发挥出更多的创意与设计弹性，在温度监控与电源管理上达到更加的自动化。</p><br>
+                    </div>
+
+                    <div id="affixBtn" class="hidden">
+                        <a href="https://iknow.lenovo.com.cn/detail/dc_076023.html" style="color:blue;">点击下载附件</a>
+                    </div>
+
+                    <input type="hidden" id="version_id" value="0"></div>
+            <div class="qcodeWra ar hidden">
+              <img src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/qcode.jpg" width="130" height="130">
+            </div>
+            <!-- <div class="wenba-detail">
+                    <div style="width: 40px;height: 40px;float: left;">
+                        <img style="width: 100%;height: 100%;" src="/front/images/linghtt.jpg">
+                    </div>
+                        <a class="more-chance" href="">获得更多解决方案</a>
+                    </div> -->
+            <div class="clearfix">
+              <div class="shareBox">
+                <span class="share">收藏：</span>
+                <span id="favoriteHeart" class="share heart" onclick="favorite()"></span>
+                <span class="share">|</span>
+                <span class="share">分享至：</span>
+                <!-- JiaThis Button BEGIN -->
+                <!--<div class="jiathis_style_32x32 fl">
+                                <a class="jiathis_button_qzone"></a>
+                                <a class="jiathis_button_tsina"></a>
+                                <a class="jiathis_button_weixin"></a>
+                            </div>
+                            <script type="text/javascript" src="http://v3.jiathis.com/code/jia.js" charset="utf-8"></script>-->
+                <!-- JiaThis Button END -->
+                <div class="social-share fl share-component" data-sites="weibo,qzone"><a class="social-share-icon icon-weibo" href="http://service.weibo.com/share/share.php?url=https%3A%2F%2Fiknow.lenovo.com.cn%2Fdetail%2Fdc_076023.html&amp;title=%E8%81%94%E6%83%B3%E4%B8%AD%E5%9B%BD(Lenovo%20China)%E8%81%94%E6%83%B3%E7%9F%A5%E8%AF%86%E5%BA%93&amp;pic=https%3A%2F%2Fiknow.lenovo.com.cn%2Ffront%2Fimages%2Fqcode.jpg&amp;appkey=" target="_blank"></a><a class="social-share-icon icon-qzone" href="http://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?url=https%3A%2F%2Fiknow.lenovo.com.cn%2Fdetail%2Fdc_076023.html&amp;title=%E8%81%94%E6%83%B3%E4%B8%AD%E5%9B%BD(Lenovo%20China)%E8%81%94%E6%83%B3%E7%9F%A5%E8%AF%86%E5%BA%93&amp;desc=%E8%81%94%E6%83%B3%E4%B8%AD%E5%9B%BD(Lenovo%20China)%E8%81%94%E6%83%B3%E7%9F%A5%E8%AF%86%E5%BA%93&amp;summary=%E8%81%94%E6%83%B3%E4%B8%AD%E5%9B%BD(Lenovo%20China)%E8%81%94%E6%83%B3%E7%9F%A5%E8%AF%86%E5%BA%93&amp;site=%E8%81%94%E6%83%B3%E4%B8%AD%E5%9B%BD(Lenovo%20China)%E8%81%94%E6%83%B3%E7%9F%A5%E8%AF%86%E5%BA%93" target="_blank"></a></div>
+              </div>
+              <div class="btnWrapper">
+                <!--<span class="addpraise hidden">+1</span>
+                            <a href="javascript:void(0);" class="praise" onclick="praise()">赞一个</a>-->
+
+                <!-- <span class="score-icon fl" id="scoreList">
+                                <i class="score-star-big"></i>
+                                <i class="score-star-big"></i>
+                                <i class="score-star-big"></i>
+                                <i class="score-star-big"></i>
+                                <i class="score-star-big"></i>
+                            </span>
+                            <span class="fl score-text"></span>
+                            <span class="fl" id="praiseEditTplWrapper">
+                                <script type="text/html" id="praiseEditTpl">
+                                <a href="javascript:void(0);" id="editBtn" class="edit" onclick="goEditKnowledge(<%=result.id %>)">我要编辑</a>
+                                </script>
+                            <span> -->
+                <div class="pointwarp" id="point-warp">
+                  <span>
+                    <img id="pointtrue" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/pointright.png" alt="">
+                    <span id="pointtruenumber">22</span>
+                  </span>
+                  <span>|</span>
+                  <span>
+                    <img id="pointfalse" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/pointleft.png" alt="">
+                    <span id="pointfalsenumber">0</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div>
+              联想网站提供的技术方案或与您产品的实际情况有所差异，您需在完整阅读方案并知晓其提示风险的情况下谨慎操作，避免造成任何损失。
+            </div>
+          </div>
+          <div id="adbottom"><div style="margin-top:20px;"><a style="display:block" target="_blank" href="http://t.lenovo.cn/JVfUz2"><img style="width:100%" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/1577774984.jpg"></a></div></div>
+          <div class="comment" style="display:none">
+            <h3>发表评论</h3>
+            <textarea class="textarea" id="content"></textarea>
+            <div class="clearfix commentScoreBtn">
+              <input type="button" value="发表评论" class="publishCommentBtn" onclick="comment()">
+              <div class="scoreContent clearfix">
+                <!--<span class="fl">评分:</span>
+                            <span class="score-icon fl" id="scoreList">
+                                <i class="score-star"></i>
+                                <i class="score-star"></i>
+                                <i class="score-star"></i>
+                                <i class="score-star"></i>
+                                <i class="score-star"></i>
+                            </span>-->
+              </div>
+              <!-- 隐藏域，用于存放回复用户id -->
+              <input type="hidden" id="replayuserid">
+              <!-- 隐藏域，用于存放评论id -->
+              <input type="hidden" id="knowledgecommentid">
+              <input type="hidden" id="commentid">
+              <input type="hidden" id="replyid">
+            </div>
+            <h3 style="display:none">文章评论</h3>
+            <ul class="commentList" style="display:none" id="commentContent">
+              <!-- <li class="commentLiContent">
+                            <div class="userContent clearfix">
+                                <span class="username">dff</span>
+                                <span class="line">|</span>
+                                <span class="time">ggfgf</span>
+                            </div>
+                            <div class="clearfix content">
+                                <a href="javascript:void(0);" class="commentReplay">回复</a>
+                                <p class="text">gfdgfdsgds</p>
+                            </div>
+                            <ul class="subCommentList">
+                                <li>
+                                    <div class="userContent clearfix">
+                                        <span class="username">dff</span>
+                                        <span class="line">|</span>
+                                        <span class="time">ggfgf</span>
+                                    </div>
+                                    <div class="clearfix content">
+                                        <a href="javascript:void(0);" class="commentReplay">回复</a>
+                                        <p class="text">gfdgfdsgds</p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </li> -->
+            </ul>
+
+            <p style="display:none" class="ac" id="querymorelink">
+              <a style="cursor: pointer;" onclick="querymorecomment()">查看更多...</a>
+            </p>
+          </div>
+        </div>
+        <div class="rightBarWrapper knowledgeCount">
+          <div class="barBox" id="countTplWrapper" style="display:none"><h3 class="box-title">知识统计</h3>
+              <ul class="countList">
+                  <li><label>浏览次数：</label><span>8639次</span></li>
+                  <li><label>最近更新：</label><span>2017-01-04 19:00</span></li>
+                  <li><label>创建者：</label><a href="https://iknow.lenovo.com.cn/foreignCenter/10068673852.html" class="creatUser">Iknow</a><a href="javascript:void(0);" class="attention" id="attentionLink" onclick="attention(&#39;10068673852&#39;)">+关注</a><a href="javascript:void(0);" class="attention overAttention hidden" id="overAttentionLink">+已关注</a></li>
+                  <li><label>贡献者：</label><span>1人</span></li>
+                  <li><label>编辑次数：</label><span>1次</span><a href="https://iknow.lenovo.com.cn/editionCompare/23153_%E7%AC%94%E8%AE%B0%E6%9C%AC%E7%94%B5%E6%BA%90%E7%AE%A1%E7%90%86%E8%8A%AF%E7%89%87(EC)%E4%BD%9C%E7%94%A8%E7%9A%84%E4%BB%8B%E7%BB%8D%20.html" class="showHistory">查看历史版本</a></li>
+                  <li>
+                      <label>评分：</label>
+                      <span class="scoreResult" id="showScore">
+                          <i class="score-star"></i>
+                          <i class="score-star"></i>
+                          <i class="score-star"></i>
+                          <i class="score-star"></i>
+                          <i class="score-star"></i>
+                      </span>
+                  </li>
+              </ul></div>
+          <div class="xiangguanwenda">
+            <div class="xiangguanwenda-content">
+              <h3 class="box-title">相关知识</h3>
+              <volist name="knowledgeArticleList" id="vo">
+                <ul></ul>
+              </volist>
+            </div>
+          </div>
+          <!-- <div style="margin-bottom: 20px;">
+        			<a onclick="clickadd()"><img src="/front/images/detailBanner.png" alt="" /></a>
+        		</div> -->
+          <div class="barBox relateKnowledge hidden" style="display: none;">
+            <h3 class="box-title">相关知识</h3>
+            <ul class="relateKnowledgeList" id="relateTplWrapper"></ul>
+          </div>
+          <div class="barBox introKnowledge hidden">
+            <h3 class="box-title">友情相关</h3>
+            <ul class="relateKnowledgeList" id="introKnowTplWrapper"></ul>
+          </div>
+          <div id="adlist"><div style="margin-top:20px;"><a style="display:block" target="_blank" href="http://iknow.lenovo.com.cn/detail/dc_KB022987.html"><img style="width:100%" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/1565249979.png"></a></div><div style="margin-top:20px;"><a style="display:block" target="_blank" href="http://t.lenovo.cn/FZVbia"><img style="width:100%" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/1589956296.jpg"></a></div><div style="margin-top:20px;"><a style="display:block" target="_blank" href="http://t.lenovo.cn/JVfUz2"><img style="width:100%" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/1577774114.jpg"></a></div></div>
+        </div>
+        <div class="robotEnterWrap">
+          <a style="display:none" href="javascript:void(0)" class="appPlus3">
+            <div class="appPlus_3"></div>
+            <div class="appPlus_4"></div>
+          </a>
+          <a style="display:none" id="chargehref" href="http://srv.lenovo.com.cn/chatwap/index.do?sd=1&amp;gd=14&amp;pt=1&amp;pmf_group=nv&amp;pmf_medium=nv&amp;pmf_source=Z00008013T000" class="appPlus1">
+            <div class="appPlus_1"></div>
+            <div class="appPlus_2"></div>
+          </a>
+          <!--  <a href="http://ask.lenovo.com.cn/html/index.html" class="wenba-rukou"></a> -->
+          <a href="javascript:void(0);" class="robotSer"></a>
+          <a class="robotSerLink hidden">联想智能客服</a>
+          <!--<a class="appPlusLink hidden">扫一扫下载联想+ <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;联想咨询，一手掌握</a>-->
+          <a href="https://iknow.lenovo.com.cn/detail/dc_076023.html" class="appPlusImg hidden"></a>
+          <!-- <a href="javascript:void(0);" class="weChatLink"></a> -->
+          <!-- <img src="/front/images/robotqcode.jpg" class="robotqcode hidden" /> -->
+          <a href="javascript:void(0);" class="returnIndexArrow"></a>
+        </div>
+      </div>
+    </div>
+    <div class="zhezhao"></div>
+    <div class="dialoge">
+      <a href="http://365.lenovo.com.cn/?from=lenser03" target="_blank">如果本知识没解决您的问题，可以选择<label style="color:#4e9eeb;border-bottom:1px solid #4e9eeb;cursor:pointer">远程专家服务</label></a>
+      <span class="closeDia">关闭</span>
+    </div>
+    <div id="foot" class="footer"><div class="footerContent clearfix">
+		<div class="friendWrap">
+			<div class="friendContent">友情链接<span class="arrow"></span>
+				<div class="toggleFriend hidden">
+					<ul class="friendList">
+						<li>
+							<a href="http://service.lenovo.com.cn/lenovo/wsi/Modules/NewDrive.aspx" target="_blank">驱动与软件下载</a>
+						</li>
+						<li>
+							<a href="http://videoservice.lenovo.com.cn/PCWeb/videoweb/pages/index.html" target="_blank">微视频服务专区</a>
+						</li>
+						<li>
+							<a href="http://service.lenovo.com.cn/lenovo/wsi/station/servicestation/default.aspx" target="_blank">服务网点查询</a>
+						</li>
+						<li>
+							<a href="http://service.lenovo.com.cn/lenovo/wsi/htmls/handbooklist.aspx" target="_blank">用户手册查询</a>
+						</li>
+						<li>
+							<a href="http://service.lenovo.com.cn/lenovo/wsi/Modules/Newbxpz.aspx" target="_blank">保修配置查询</a>
+						</li>
+						<li>
+							<a href="http://service.lenovo.com.cn/lenovo/wsi/htmls/policylist_1349943520435.aspx" target="_blank">服务政策查询</a>
+						</li>
+					</ul>
+					<span class="guidarrow"></span>
+				</div>
+			</div>
+			<span>|</span>
+			<a href="https://iknow.lenovo.com.cn/helpDoc.html" class="helpBtn">使用帮助</a>
+			<span>|</span>
+			<a href="https://iknow.lenovo.com.cn/feedback/iknow.html" class="underLinkBtn">知识反馈</a>
+		</div>	
+		<div class="copyText">
+			版权所有：1998-2020 联想集团 | <a href="http://appserver.lenovo.com.cn/Public/public_bottom/legal.shtml">法律公告</a> | <a href="http://appserver.lenovo.com.cn/Public/public_bottom/privacy.shtml">隐私保护</a> | <a href="http://iknow.lenovo.com.cn/sos.html">服务声明</a> | <a href="http://iknow.lenovo.com.cn/license.html">工具使用许可协议</a> 京ICP备11035381
+		</div>
+	</div></div>
+    <div class="pop">
+      <div class="popcontent">
+        <span class="popclose">×</span>
+        <div class="p_c_title">抱歉影响您的体验了!</div>
+        <div class="p_c_content">
+          <textarea id="p_content" placeholder="您的声音对我们非常重要"></textarea>
+        </div>
+        <div class="z_code">
+          <span>验证码：<input type="text" id="p_code"></span>
+          <span>
+            <img id="p_img" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/verify_c" alt="验证码">
+          </span>
+        </div>
+        <div class="p_bottom">
+          <button class="p_close">取消</button>
+          <button class="p_sure">确定</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="text/javascript" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/template.min.js"></script>
+    <script type="text/javascript" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/json2.min.js"></script>
+    <script type="text/javascript" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/jquery.autocomplete.min.js"></script>
+    <script type="text/javascript" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/util.js"></script><div class="head"></div>
+
+    <script type="text/javascript" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/tongji.js"></script>
+
+    <!-- 添加监控 -->
+    <script type="text/javascript" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/s_code.js"></script>
+    <script type="text/javascript">
+      var jsstr = "服务频道:Iknow:PC端正文页";
+    </script>
+    <script type="text/javascript" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/flex.min.js"></script>
+    <script type="text/javascript" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/omniture.js"></script>
+    <script type="text/javascript" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/small-robot-red.js"></script><script type="text/javascript" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/robot.js"></script><script type="text/javascript" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/jquery-ui-1.10.4.min.js"></script><script type="text/javascript" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/jquery.mousewheel.min.js"></script><script type="text/javascript" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/jquery.mCustomScrollbar.min.js"></script><link rel="stylesheet" type="text/css" href="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/robot_blue.css"><link rel="stylesheet" type="text/css" href="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/jquery.mCustomScrollbar.css">
+    <script type="text/javascript">
+      window._pt_lt = new Date().getTime();
+      window._pt_sp_2 = [];
+      _pt_sp_2.push("setAccount,75bc0273");
+      var _protocol =
+        "https:" == document.location.protocol ? " https://" : " http://";
+      (function() {
+        var atag = document.createElement("script");
+        atag.type = "text/javascript";
+        atag.async = true;
+        atag.src = _protocol + "js.ptengine.cn/75bc0273.js";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(atag, s);
+      })();
+    </script>
+    <script type="text/javascript">
+      $(".more-chance").click(function() {
+        _hmt.push(["_trackEvent", "来源:灯泡话术", "click"]);
+      });
+      $(".more-content").click(function() {
+        _hmt.push(["_trackEvent", "来源:更多话术", "click"]);
+      });
+      $(".wenba-rukou").click(function() {
+        _hmt.push(["_trackEvent", "来源:问吧图标", "click"]);
+      });
+    </script>
+    <script type="text/javascript">
+      var _trackDataType = "web"; //default variable
+      var _trackData = _trackData || []; //It is a global variable,
+      var _la_lenovo_website = 10000152; // default variable
+      var laurl = ""; // set la.cookie.no.leid.getcookie.js file path
+      var CONFIGS = { lenovoid: "", club_pc_fid: "", pc_child_id: "child" };
+    </script>
+    <script></script>
+    <script src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/la.min-0531.js" type="text/javascript"></script>
+    <script type="text/javascript" src="./笔记本电源管理芯片(EC)作用的介绍 -联想知识库_files/usercomment.js"></script>
+  
+
+
+<!-- zhaonan -->
+</body></html>

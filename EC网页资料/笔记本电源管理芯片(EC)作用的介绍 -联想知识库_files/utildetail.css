@@ -1,0 +1,337 @@
+.hide {
+    display: none
+}
+
+.show {
+    display: block
+}
+
+.robotEnterWrap {
+    position: fixed;
+    right:0;
+    top: 355px;
+    z-index: 9990;
+    width: 220px;
+    height: 255px;
+    overflow: hidden;
+}
+/*ZHAONAN*/
+.robotEnterWrap a {
+    display: block;
+}
+.robotEnterWrap .mallEntrance {
+    position: absolute;
+    top: 0;
+    left: 144px;
+    z-index: 9999;
+    width: 40px;
+    height: 40px;
+    background: url(../images/mallEntranceIcon.png) no-repeat;
+}
+.mallEntranceLink {
+    position: absolute;
+    top: 0;
+    left: 165px;
+    /*left: -81px;*/
+    z-index: 10000;
+    width: 101px;
+    height: 40px;
+    background: url(../images/mallEntranceHoverIcon.png) no-repeat;
+    cursor: pointer;
+}
+.robotEnterWrap .robotSer {
+    position: absolute;
+    top: 110px;
+    left: 165px; 
+    z-index: 9999;
+    width: 50px;
+    height: 50px;
+    background: url(../images/robotIcon3.gif) no-repeat;
+}
+.robotEnterWrap .wenba-rukou{
+    position: absolute;
+    top: 55px;
+    left: 165px; 
+    z-index: 9999;
+    width: 50px;
+    height: 50px;
+    background: url(../images/wen.png) no-repeat;
+    background-size: 50px 50px ;
+}
+.robotEnterWrap .appPlus{
+    position: absolute;
+    top: 55px;
+    left: 165px; 
+    z-index: 9999;
+    width: 50px;
+    height: 50px;
+    background: url(../images/people_server.jpg) no-repeat;
+    background-size: 50px 50px ;
+    transition: all 1s;
+}
+.robotEnterWrap .appPlus1{
+    position: absolute;
+    top: 0px;
+    left: 55px; 
+    z-index: 9999;
+    width: 165px;
+    height: 50px;
+}
+.robotEnterWrap .appPlus1 .appPlus_1{
+    position: absolute;
+    top: 0px;
+    left: 110px;
+    z-index: 9999;
+    width: 50px;
+    height: 50px;
+    background: url(../images/people_server.png) no-repeat;
+    background-size: 50px 50px;
+}
+.robotEnterWrap .appPlus1:hover .appPlus_1{
+  display: none;
+}
+.robotEnterWrap .appPlus1 .appPlus_2{
+    position: absolute;
+    top: 0px;
+    left: 165px;
+    z-index: 9999;
+    width: 165px;
+    height: 50px;
+    background: url(../images/people_click.png) no-repeat;
+    background-size: 0px 0px;
+    transition: left 0.5s;
+    border-radius:3px;
+}
+.robotEnterWrap .appPlus1:hover .appPlus_2{
+    display:block;
+    top: 0px;
+    left: 0px; 
+    z-index: 9999;
+    width: 165px;
+    height: 50px;
+    background: url(../images/people_click.png) no-repeat;
+    background-size: 165px 50px ;
+}
+.robotEnterWrap .appPlus3{
+    position: absolute;
+    top: 55px;
+    left: 55px; 
+    z-index: 9999;
+    width: 165px;
+    height: 50px;
+}
+.robotEnterWrap .appPlus3 .appPlus_3{
+    position: absolute;
+    top: 0px;
+    left: 110px;
+    z-index: 9999;
+    width: 50px;
+    height: 50px;
+    background: url(../images/topic_server.png) no-repeat;
+    background-size: 50px 50px;
+}
+.robotEnterWrap .appPlus3:hover .appPlus_3{
+  display: none;
+}
+.robotEnterWrap .appPlus3 .appPlus_4{
+    position: absolute;
+    top: 0px;
+    left: 165px;
+    z-index: 9999;
+    width: 165px;
+    height: 50px;
+    background: url(../images/topic_click.png) no-repeat;
+    background-size: 0px 0px;
+    transition: left 0.5s;
+    border-radius:3px;
+}
+.robotEnterWrap .appPlus3:hover .appPlus_4{
+    display:block;
+    top: 0px;
+    left: 0px; 
+    z-index: 9999;
+    width: 165px;
+    height: 50px;
+    background: url(../images/topic_click.png) no-repeat;
+    background-size: 165px 50px ;
+}
+
+
+
+.robotEnterWrap .wenba-rukou:hover{
+    background: url(../images/help.png) no-repeat;
+    background-size: 50px 50px ;
+}
+.robotSerLink {
+    position: absolute;
+    top: 110px;
+    left: 165px;
+    /*left: -81px;*/
+    line-height: 50px;
+    color: #fff;
+    z-index: 10000;
+    width: 150px;
+    text-indent: 4px;
+    font-size: 15px;
+    height: 50px;
+    background: #2a8efe url(../images/hover-icon.png) no-repeat 97px;
+    background-size: 50px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.appPlusLink {
+    position: absolute;
+    top: 0px;
+    left: 184px;
+    line-height: 25px;
+    color: #000;
+    border: 1px solid #ccc;
+    text-indent: 30px;
+    z-index: 10000;
+    width: 213px;
+    font-size: 12px;
+    height: 50px;
+    background: #fff url(../images/lenovo-plus.png) no-repeat right;
+    background-size: 50px;
+    cursor: pointer;
+}
+.appPlusImg{
+    position: absolute;
+    top: 52px;
+    left: 184px;
+    line-height: 25px;
+    border: 1px solid #ccc;
+    z-index: 10000;
+    width: 138px;
+    height: 138px;
+    background: #fff url(../images/iKnow_homepage.jpg) no-repeat right;
+    background-size: 140px;
+    cursor: pointer;
+}
+.xiangguanwenda{
+    width: 360px;
+    height: 240px;
+    margin-bottom: 20px;
+    background: #fff;
+}
+.xiangguanwenda-content{
+    padding: 18px 20px 20px 20px;
+    background: #fff;
+}
+.xiangguanwenda-content .box-title {
+    margin-bottom: 16px;
+    padding-left: 6px;
+    border-left: 3px solid #68aae9;
+    color: #3a3a3a;
+    font-size: 16px;
+    float: left;
+}
+.xiangguanwenda-content li{
+    float: left;
+    width: 320px;
+    height: 24px;
+    line-height: 24px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    margin: 5px auto;
+}
+.xiangguanwenda-content li a{
+    float: left;
+    width: 296px;
+    height: 24px;
+    line-height: 24px;
+    text-indent: 5px;
+     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.xiangguanwenda-content li p{
+    float: left;
+    height: 24px;
+    text-align: center;
+    width: 24px;
+    line-height: 24px;
+    background: #68aae9;
+    font-size: 16px;
+    color: #fff;
+}
+/*.robotEnterWrap .weChatLink {
+    position: absolute;
+    top: 90px;
+    left: 144px;
+    z-index: 9999;
+    width: 40px;
+    height: 40px;
+    background: url(../images/wechaticon2.png) no-repeat;
+}*/
+/*.robotEnterWrap a.weChatLink:hover {
+    background: url(../images/wechaticonhover.png) no-repeat;
+}*/
+.robotqcode {
+    position: absolute;
+    top: 0;
+    left: 40px;
+    /*left: -144px;*/
+    z-index: 9991;
+    width: 144px;
+    height: 205px;
+}
+.robotSer:hover{
+    background: url(../images/hover-icon.png) no-repeat center center;
+}
+.robotEnterWrap .returnIndexArrow {
+    position: absolute;
+    top: 165px;
+    left: 165px;
+    z-index: 9999;
+    width: 50px;
+    height: 50px;
+    background: url(../images/toparrow1.png) no-repeat;
+}
+
+.robotEnterWrap a.returnIndexArrow:hover {
+    background: url(../images/toparrowhover2.png) no-repeat;
+}
+/*******详情页加对话框*********/
+.zhezhao{
+    background: #d0d2d2 none repeat scroll 0 0;
+    display: none;
+    height: 100%;
+    left: 0;
+    opacity: 0.5;
+    filter:alpha(opacity=50);
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 9999;
+}
+.dialoge{
+    background: #fff none repeat scroll 0 0;
+    display: none;
+    height: 190px;
+    left: 50%;
+    margin-left: -160px;
+    margin-top: -150px;
+    position: fixed;
+    top: 50%;
+    width: 320px;
+    z-index: 10002;
+}
+.dialoge a,.dialoge span{
+    display: inline-block;
+    width:260px;
+} 
+.dialoge a{
+    margin-left:30px; 
+    margin-top:30px;
+    line-height:20px;
+}
+.dialoge span{
+    width:100px;
+    height:30px;
+    line-height: 30px;
+    text-align:center;
+    margin-left:110px;
+    margin-top:40px;
+    background: #76bcfd;
+    border-radius: 3px;
+    cursor: pointer;
+}
+/*zhaonan*/  

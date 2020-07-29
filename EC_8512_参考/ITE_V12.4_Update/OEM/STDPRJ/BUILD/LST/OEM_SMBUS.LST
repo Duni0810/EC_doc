@@ -1,0 +1,1538 @@
+C51 COMPILER V7.06   OEM_SMBUS                                                             07/06/2010 09:59:51 PAGE 1   
+
+
+C51 COMPILER V7.06, COMPILATION OF MODULE OEM_SMBUS
+OBJECT MODULE PLACED IN SOURCE\OEM_SMBUS.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\c51.exe SOURCE\OEM_SMBUS.C LA WL(1) CD OT(8,SIZE) OR
+
+stmt level    source
+
+   1          /*-----------------------------------------------------------------------------
+   2           * Filename: OEM_SMBUS.C
+   3           * Function: OEM SMBUS HANDLE
+   4           *
+   5           * Copyright (c) 2006-2009, ITE Tech. Inc. All Rights Reserved.
+   6           *---------------------------------------------------------------------------*/
+   7          #include "CORE_INCLUDE.H"
+   8          #include "OEM_INCLUDE.H"
+   9          
+  10          /*-----------------------------------------------------------------------------
+  11           * Local Parameter Definition
+  12           *---------------------------------------------------------------------------*/
+  13          #define SUPPORT_SOFTWARE_I2C        0
+  14          //-----------------------------------------------------------------------------
+  15          #define SMBA_DEV1_ADDR              0x16    //Smart Battery
+  16          #define SMBA_DEV1_POLL_SET          20
+  17          #define SMBA_DEV2_ADDR              0x98    //Thermal Sensor IC
+  18          #define SMBA_DEV2_POLL_SET          200
+  19          #define SMBA_DEV3_ADDR              0x12    //Smart Charger
+  20          #define SMBA_DEV3_POLL_SET          5
+  21          //-----------------------------------------------------------------------------
+  22          #define SMBB_DEV1_ADDR              0x98    //Thermal Sensor IC
+  23          #define SMBB_DEV1_POLL_SET          200
+  24          #define SMBB_DEV2_ADDR              0x8C    //ITE Cap Sensor
+  25          #define SMBB_DEV2_POLL_SET          5
+  26          //-----------------------------------------------------------------------------
+  27          #define SMBC_DEV1_ADDR              0x8C    //ITE Cap Sensor
+  28          #define SMBC_DEV1_POLL_SET          40
+  29           //-----------------------------------------------------------------------------
+  30          #define _SMB_QK_BYTE                0x40
+  31          #define _SMB_TX_BYTE                0x44
+  32          #define _SMB_RX_BYTE                0x45
+  33          #define _SMB_RD_BYTE                0x48
+  34          #define _SMB_WR_BYTE                0x49
+  35          #define _SMB_RD_WORD                0x4C
+  36          #define _SMB_WR_WORD                0x4D
+  37          #define _SMB_RD_BLCK                0x54
+  38          #define _SMB_WR_BLCK                0x55
+  39          //-----------------------------------------------------------------------------
+  40          
+  41          #define IC1_LocalTemperature        (*(XBYTE*)0x0580)
+  42          #define IC1_ExternalTemperature     (*(XBYTE*)0x0581)
+  43          #define IC2_LocalTemperature        (*(XBYTE*)0x0582)
+  44          #define IC2_ExternalTemperature     (*(XBYTE*)0x0583)
+  45          
+  46          
+  47          
+  48          //-----------------------------------------------------------------------------
+  49          // OEM Handle -- (Hook form CORE_ACPI.C)
+  50          // ACPI Spec.13.9 SMBus Host Controller In terface via Embedded Controller
+  51          //-----------------------------------------------------------------------------"
+  52          BYTE Oem_ACPISMBusviaEC(void)
+  53          {
+  54   1          #if SUPPORTED_ACPI_SMB_EC
+                  /*
+C51 COMPILER V7.06   OEM_SMBUS                                                             07/06/2010 09:59:51 PAGE 2   
+
+                  //Selector command sample code
+                  if( (SMB_PRTC != 0x00) && (SMB_ADDR == 0x14) )
+                  {
+                      SMB_STS &= 0x00;
+                      SMB_PRTC &= 0x0F;
+                      (ECSelectorComd_table[SMB_PRTC])();
+                      SMB_STS |= 0x80;
+                      SMB_PRTC = 0x00;
+                      WriteSCI_QueryValue(EC_SMB_SCI_Number);
+                      return 0x01;    //Return Service Flag
+                  }
+                  */
+                  #endif
+  69   1      
+  70   1          return 0x00;    //Return Service Flag
+  71   1      
+  72   1      }
+  73          
+  74          /* ----------------------------------------------------------------------------
+  75           * FUNCTION: SMBusA_Data_Center
+  76           *
+  77           * ------------------------------------------------------------------------- */
+  78          void SMBusA_Scan_Center(void)
+  79          {
+  80   1          //-------------------------------------------------------------------------
+  81   1          if( bSMBA_GetData || HOSTA_A > 0 )     return;
+  82   1          //-------------------------------------------------------------------------
+  83   1          if( (SMBPCTL_A&0x03) != 0x03 )
+  84   1          {
+  85   2              return;
+  86   2          }
+  87   1          //-------------------------------------------------------------------------
+  88   1          switch(SMBA_DEV_DIR)
+  89   1          {
+  90   2              case 0: if( bSMBA_Dev1_OnLine )
+  91   2                      {
+  92   3                          if( SMBA_Dev1_POLL_SPEED > 0 )
+  93   3                          {
+  94   4                              SMBA_Dev1_POLL_SPEED--;
+  95   4                          }
+  96   3                          else
+  97   3                          {
+  98   4                              SMBusA_Device1();
+  99   4                              if( bSMBA_Dev1_InitOK )
+ 100   4                              {
+ 101   5                                  SMBA_Dev1_POLL_SPEED = SMBA_DEV1_POLL_SET;
+ 102   5                              }
+ 103   4                              else
+ 104   4                              {
+ 105   5                                  SMBA_Dev1_POLL_SPEED = 1;
+ 106   5                              }
+ 107   4                          }
+ 108   3                      }
+ 109   2                      SMBA_DEV_DIR = 1;
+ 110   2                      break;
+ 111   2      
+ 112   2              case 1: if( SMBA_Dev2_POLL_SPEED > 0 )
+ 113   2                      {
+ 114   3                          SMBA_Dev2_POLL_SPEED--;
+ 115   3                      }
+ 116   2                      else
+ 117   2                      {
+C51 COMPILER V7.06   OEM_SMBUS                                                             07/06/2010 09:59:51 PAGE 3   
+
+ 118   3                          SMBusA_Device2();
+ 119   3                          SMBA_Dev2_POLL_SPEED = SMBA_DEV2_POLL_SET;
+ 120   3                      }
+ 121   2                      SMBA_DEV_DIR = 0;
+ 122   2                      //SMBA_DEV_DIR = 2;
+ 123   2                      break;
+ 124   2              //case 2: if( SMBusA_Device3() )    SMBA_DEV_DIR = x;
+ 125   2              //        break;
+ 126   2              //case 3: if( SMBusA_Device4() )    SMBA_DEV_DIR = x;
+ 127   2              //        break;
+ 128   2              default:
+ 129   2                      SMBA_DEV_DIR = 0;
+ 130   2                      break;
+ 131   2          }
+ 132   1          //-------------------------------------------------------------------------
+ 133   1      }
+ 134          //-----------------------------------------------------------------------------
+ 135          
+ 136          /* ----------------------------------------------------------------------------
+ 137           * FUNCTION: SMBusB_Data_Center
+ 138           *
+ 139           * ------------------------------------------------------------------------- */
+ 140          void SMBusB_Scan_Center(void)
+ 141          {
+ 142   1          //-------------------------------------------------------------------------
+ 143   1          if( bSMBB_GetData || HOSTA_B > 0 )     return;
+ 144   1          //-------------------------------------------------------------------------
+ 145   1          if( (SMBPCTL_B&0x03) != 0x03 )
+ 146   1          {
+ 147   2              return;
+ 148   2          }
+ 149   1          //-------------------------------------------------------------------------
+ 150   1          switch(SMBB_DEV_DIR)
+ 151   1          {
+ 152   2              case 0:
+ 153   2                      if( bSMBB_Dev1_OnLine )
+ 154   2                      {
+ 155   3                          if( SMBB_Dev1_POLL_SPEED > 0 )
+ 156   3                          {
+ 157   4                              SMBB_Dev1_POLL_SPEED--;
+ 158   4                          }
+ 159   3                          else
+ 160   3                          {
+ 161   4                              SMBusB_Device1();
+ 162   4                              if( bSMBB_Dev1_InitOK )
+ 163   4                              {
+ 164   5                                  SMBB_Dev1_POLL_SPEED = SMBB_DEV1_POLL_SET;
+ 165   5                              }
+ 166   4                              else
+ 167   4                              {
+ 168   5                                  SMBB_Dev1_POLL_SPEED = 1;
+ 169   5                              }
+ 170   4                          }
+ 171   3                      }
+ 172   2                      SMBB_DEV_DIR = 1;
+ 173   2                      break;
+ 174   2              /*
+ 175   2              case 1:
+ 176   2                      if( SMBB_Dev2_POLL_SPEED > 0 )
+ 177   2                      {
+ 178   2                          SMBB_Dev2_POLL_SPEED--;
+ 179   2                      }
+C51 COMPILER V7.06   OEM_SMBUS                                                             07/06/2010 09:59:51 PAGE 4   
+
+ 180   2                      else
+ 181   2                      {
+ 182   2                          SMBusB_Device2();
+ 183   2                          SMBB_Dev2_POLL_SPEED = SMBB_DEV2_POLL_SET;
+ 184   2                      }
+ 185   2                      SMBB_DEV_DIR = 0;
+ 186   2                      //SMBB_DEV_DIR = 2;
+ 187   2                      break;
+ 188   2              */
+ 189   2              //case 2: if( SMBusB_Device3() )    SMBB_DEV_DIR = x;
+ 190   2              //        break;
+ 191   2              //case 3: if( SMBusB_Device4() )    SMBB_DEV_DIR = x;
+ 192   2              //        break;
+ 193   2              default:
+ 194   2                      SMBB_DEV_DIR = 0;
+ 195   2                      break;
+ 196   2          }
+ 197   1          //-------------------------------------------------------------------------
+ 198   1      
+ 199   1      }
+ 200          //-----------------------------------------------------------------------------
+ 201          
+ 202          /* ----------------------------------------------------------------------------
+ 203           * FUNCTION: SMBusA_Device1
+ 204           *
+ 205           * ------------------------------------------------------------------------- */
+ 206          #define _SIZE_InitBatteryATable         24
+ 207          const sRSmbusStruct code _InitBatteryATable[] =
+ 208          {
+ 209              { _SMB_RD_WORD, _CMD_ManufacturerAccess,    &BAT1_ManufacturerAccess    },
+ 210              { _SMB_RD_WORD, _CMD_BatteryMode,           &BAT1_BatteryMode           },
+ 211              { _SMB_RD_WORD, _CMD_Temperature,           &BAT1_Temperature           },
+ 212              { _SMB_RD_WORD, _CMD_Voltage,               &BAT1_Voltage               },
+ 213              { _SMB_RD_WORD, _CMD_Current,               &BAT1_Current               },
+ 214              { _SMB_RD_WORD, _CMD_AverageCurrent,        &BAT1_AverageCurrent        },
+ 215              { _SMB_RD_WORD, _CMD_MaxError,              &BAT1_MaxError              },
+ 216              { _SMB_RD_WORD, _CMD_RelativeStateOfCharge, &BAT1_RelativeStateOfChg    },
+ 217              { _SMB_RD_WORD, _CMD_AbsoluteStateOfCharge, &BAT1_AbsoluteOfCharge      },
+ 218              { _SMB_RD_WORD, _CMD_RemainingCapacity,     &BAT1_RemainingCapacity     },
+ 219              { _SMB_RD_WORD, _CMD_FullChargeCapacity,    &BAT1_FullChargeCapacity    },
+ 220              { _SMB_RD_WORD, _CMD_ChargingCurrent,       &BAT1_ChargingCurrent       },
+ 221              { _SMB_RD_WORD, _CMD_ChargingVoltage,       &BAT1_ChargingVoltage       },
+ 222              { _SMB_RD_WORD, _CMD_BatteryStatus,         &BAT1_BatteryStatus         },
+ 223              { _SMB_RD_WORD, _CMD_CycleCount,            &BAT1_CycleCount            },
+ 224              { _SMB_RD_WORD, _CMD_DesignCapacity,        &BAT1_DesignCapacity        },
+ 225              { _SMB_RD_WORD, _CMD_DesignVoltage,         &BAT1_DesignVoltage         },
+ 226              { _SMB_RD_WORD, _CMD_SpecificationInfo,     &BAT1_SpecificationInfo     },
+ 227              { _SMB_RD_WORD, _CMD_ManufactureDate,       &BAT1_ManufactureDate       },
+ 228              { _SMB_RD_WORD, _CMD_SerialNumber,          &BAT1_SerialNumber          },
+ 229              { _SMB_RD_BLCK, _CMD_ManufacturerName,      &BAT1_ManufacturerName      },
+ 230              { _SMB_RD_BLCK, _CMD_DeviceName,            &BAT1_DeviceName            },
+ 231              { _SMB_RD_BLCK, _CMD_DeviceChemistry,       &BAT1_DeviceChemistry       },
+ 232              { _SMB_RD_WORD, _CMD_ManufacturerData,      &BAT1_ManufacturerData      },
+ 233          };
+ 234          //-----------------------------------------------------------------------------
+ 235          //-----------------------------------------------------------------------------
+ 236          #define _SIZE_ReadBatteryATable         12
+ 237          const sRSmbusStruct code _ReadBatteryATable[] =
+ 238          {
+ 239              { _SMB_RD_WORD, _CMD_ManufacturerAccess,    &BAT1_ManufacturerAccess    },
+ 240              { _SMB_RD_WORD, _CMD_Temperature,           &BAT1_Temperature           },
+ 241              { _SMB_RD_WORD, _CMD_Voltage,               &BAT1_Voltage               },
+C51 COMPILER V7.06   OEM_SMBUS                                                             07/06/2010 09:59:51 PAGE 5   
+
+ 242              { _SMB_RD_WORD, _CMD_Current,               &BAT1_Current               },
+ 243              { _SMB_RD_WORD, _CMD_AverageCurrent,        &BAT1_AverageCurrent        },
+ 244              { _SMB_RD_WORD, _CMD_RelativeStateOfCharge, &BAT1_RelativeStateOfChg    },
+ 245              { _SMB_RD_WORD, _CMD_AbsoluteStateOfCharge, &BAT1_AbsoluteOfCharge      },
+ 246              { _SMB_RD_WORD, _CMD_RemainingCapacity,     &BAT1_RemainingCapacity     },
+ 247              { _SMB_RD_WORD, _CMD_FullChargeCapacity,    &BAT1_FullChargeCapacity    },
+ 248              { _SMB_RD_WORD, _CMD_ChargingCurrent,       &BAT1_ChargingCurrent       },
+ 249              { _SMB_RD_WORD, _CMD_ChargingVoltage,       &BAT1_ChargingVoltage       },
+ 250              { _SMB_RD_WORD, _CMD_BatteryStatus,         &BAT1_BatteryStatus         },
+ 251          };
+ 252          //-----------------------------------------------------------------------------
+ 253          bit SMBusA_Device1(void)
+ 254          {
+ 255   1          //-------------------------------------------------------------------------
+ 256   1          if( !bSMBB_Dev1_InitOK )
+ 257   1          {
+ 258   2              if( SMBA_Dev1_POLL_DIR >= _SIZE_InitBatteryATable )
+ 259   2              {
+ 260   3                  SMBA_Dev1_POLL_DIR = 0;
+ 261   3                  bSMBA_Dev1_InitOK  = 1;
+ 262   3              }
+ 263   2              SMBA_DEV_CTL = _InitBatteryATable[SMBA_Dev1_POLL_DIR].address;
+ 264   2              SMBA_DEV_CMD = _InitBatteryATable[SMBA_Dev1_POLL_DIR].cmd;
+ 265   2              SMBA_DEV_MEM = _InitBatteryATable[SMBA_Dev1_POLL_DIR].smbdata;
+ 266   2          }
+ 267   1          else
+ 268   1          {
+ 269   2              if( SMBA_Dev1_POLL_DIR >= _SIZE_ReadBatteryATable )
+ 270   2              {
+ 271   3                  SMBA_Dev1_POLL_DIR = 0;
+ 272   3              }
+ 273   2              SMBA_DEV_CTL = _ReadBatteryATable[SMBA_Dev1_POLL_DIR].address;
+ 274   2              SMBA_DEV_CMD = _ReadBatteryATable[SMBA_Dev1_POLL_DIR].cmd;
+ 275   2              SMBA_DEV_MEM = _ReadBatteryATable[SMBA_Dev1_POLL_DIR].smbdata;
+ 276   2          }
+ 277   1          //-------------------------------------------------------------------------
+ 278   1          HOCMD_A  = SMBA_DEV_CMD;
+ 279   1          TRASLA_A = SMBA_DEV1_ADDR;
+ 280   1      
+ 281   1          if( (SMBA_DEV_CTL&0x01) == 0 )      TRASLA_A |= 0x01;
+ 282   1      
+ 283   1          HOCTL_A  = (SMBA_DEV_CTL&0xFC);     //Start
+ 284   1          SMBA_Dev1_POLL_DIR++;
+ 285   1          bSMBA_GetData = 1;
+ 286   1          SMBA_BYTE_CNT = 0;
+ 287   1          SMBA_DEV_NO   = 1;
+ 288   1          return TRUE;
+ 289   1      }
+ 290          //-----------------------------------------------------------------------------
+ 291          
+ 292          /*
+ 293          ;;-----------------------------------------------------------------------------
+ 294          ;; List of ADM1032 Registers (Reference Specification)
+ 295          ;;-----------------------------------------------------------------------------
+ 296          ;; READ|WRITE|
+ 297          ;; ADDR|ADDR | Name                                    Power-On Default
+ 298          ;;-----+-----------------------------------------------------------------------
+ 299          ;;  00 | Not | Local Temperature Value                 0000 0000 (00h)
+ 300          ;;  01 | Not | External Temperature Value High Byte    0000 0000 (00h)
+ 301          ;;  02 | Not | Status Undefined
+ 302          ;;  03 | 09  | Configuration                           0000 0000 (00h)
+ 303          ;;  04 | 0A  | Conversion Rate                         0000 1000 (08h)
+C51 COMPILER V7.06   OEM_SMBUS                                                             07/06/2010 09:59:51 PAGE 6   
+
+ 304          ;;  05 | 0B  | Local Temperature High Limit            0101 0101 (55h)(+85¢XC)
+ 305          ;;  06 | 0C  | Local Temperature Low Limit             0000 0000 (00h)(0¢XC)
+ 306          ;;  07 | 0D  | External Temperature High Limit Hi Byte 0101 0101 (55h)(+85¢XC)
+ 307          ;;  08 | 0E  | External Temperature Low Limit Hi Byte  0000 0000 (00h)(0¢XC)
+ 308          ;;  10 | Not | Applicable External Temperature Lo Byte 0000 0000
+ 309          ;;  11 | 11  | External Temperature Offset High Byte   0000 0000
+ 310          ;;  12 | 12  | External Temperature Offset Low Byte    0000 0000
+ 311          ;;  13 | 13  | External Temperature High Limit Lo Byte 0000 0000
+ 312          ;;  14 | 14  | External Temperature Low Limit Lo Byte  0000 0000
+ 313          ;;  19 | 19  | External THERM Limit                    0101 0101 (55h)(+85¢XC)
+ 314          ;;  20 | 20  | Local THERM Limit                       0101 0101 (55h)(+85¢XC)
+ 315          ;;  21 | 21  | THERM Hysteresis                        0000 1010 (0Ah)(+10¢XC)
+ 316          ;;  22 | 22  | Consecutive ALERT                       0000 0001 (01h)
+ 317          ;;-----+-----------------------------------------------------------------------
+ 318          */
+ 319          #define _THR_LocalTemperature           0x00
+ 320          #define _THR_ExternalTemperature        0x01
+ 321          #define _THR_Configuration              0x03
+ 322          #define _THR_ConversionRate             0x04
+ 323          #define _THR_LocalTemp_HighLimit        0x05
+ 324          #define _THR_LocalTemp_LowLimit         0x06
+ 325          #define _THR_ExternalTemp_HighLimit     0x07
+ 326          #define _THR_ExternalTemp_LowLimit      0x08
+ 327          #define _THW_Configuration              0x09
+ 328          #define _THW_ConversionRate             0x0A
+ 329          #define _THW_LocalTemp_HighLimit        0x0B
+ 330          #define _THW_LocalTemp_LowLimit         0x0C
+ 331          #define _THW_ExternalTemp_HighLimit     0x0D
+ 332          #define _THW_ExternalTemp_LowLimit      0x0E
+ 333          
+ 334          /* ----------------------------------------------------------------------------
+ 335           * FUNCTION: SMBusA_Device2
+ 336           *
+ 337           * ------------------------------------------------------------------------- */
+ 338          #define _SIZE_ReadThermailIC1Table      2
+ 339          const sRSmbusStruct code _ReadThermalIC1_Table[]=
+ 340          {
+ 341              { _SMB_RD_BYTE, _THR_LocalTemperature,      &IC1_LocalTemperature       },
+ 342              { _SMB_RD_BYTE, _THR_ExternalTemperature,   &IC1_ExternalTemperature    },
+ 343          };
+ 344          //-----------------------------------------------------------------------------
+ 345          bit SMBusA_Device2(void)
+ 346          {
+ 347   1          //-------------------------------------------------------------------------
+ 348   1          if( !CORE_PMFLAG_S0 )       return TRUE;
+ 349   1          //-------------------------------------------------------------------------
+ 350   1          if( SMBA_Dev2_POLL_DIR >= _SIZE_ReadThermailIC1Table )
+ 351   1          {
+ 352   2              SMBA_Dev2_POLL_DIR = 0;
+ 353   2          }
+ 354   1      
+ 355   1          SMBA_DEV_CTL = _ReadThermalIC1_Table[SMBA_Dev2_POLL_DIR].address;
+ 356   1          SMBA_DEV_CMD = _ReadThermalIC1_Table[SMBA_Dev2_POLL_DIR].cmd;
+ 357   1          SMBA_DEV_MEM = _ReadThermalIC1_Table[SMBA_Dev2_POLL_DIR].smbdata;
+ 358   1          HOCMD_A  = SMBA_DEV_CMD;
+ 359   1          TRASLA_A = SMBA_DEV2_ADDR;
+ 360   1      
+ 361   1          if( (SMBA_DEV_CTL&0x01) == 0 )      TRASLA_A |= 0x01;
+ 362   1      
+ 363   1          HOCTL_A  = (SMBA_DEV_CTL&0xFC);     //Start
+ 364   1          SMBA_Dev2_POLL_DIR++;
+ 365   1          bSMBA_GetData = 1;
+C51 COMPILER V7.06   OEM_SMBUS                                                             07/06/2010 09:59:51 PAGE 7   
+
+ 366   1          SMBA_BYTE_CNT = 0;
+ 367   1          SMBA_DEV_NO   = 2;
+ 368   1          return TRUE;
+ 369   1      }
+ 370          //-----------------------------------------------------------------------------
+ 371          
+ 372          /* ----------------------------------------------------------------------------
+ 373           * FUNCTION: SMBusA_Device2
+ 374           *
+ 375           * ------------------------------------------------------------------------- */
+ 376          #define _SIZE_ReadThermailIC2Table      2
+ 377          const sRSmbusStruct code _ReadThermalIC2_Table[]=
+ 378          {
+ 379              { _SMB_RD_BYTE, _THR_LocalTemperature,      &IC2_LocalTemperature       },
+ 380              { _SMB_RD_BYTE, _THR_ExternalTemperature,   &IC2_ExternalTemperature    },
+ 381          };
+ 382          //-----------------------------------------------------------------------------
+ 383          bit SMBusB_Device1(void)
+ 384          {
+ 385   1          //-------------------------------------------------------------------------
+ 386   1          if( !CORE_PMFLAG_S0 )       return TRUE;
+ 387   1          //-------------------------------------------------------------------------
+ 388   1          if( SMBB_Dev1_POLL_DIR >= _SIZE_ReadThermailIC2Table )
+ 389   1          {
+ 390   2              SMBB_Dev1_POLL_DIR = 0;
+ 391   2          }
+ 392   1          //-------------------------------------------------------------------------
+ 393   1          SMBB_DEV_CTL = _ReadThermalIC2_Table[SMBB_Dev2_POLL_DIR].address;
+ 394   1          SMBB_DEV_CMD = _ReadThermalIC2_Table[SMBB_Dev2_POLL_DIR].cmd;
+ 395   1          SMBB_DEV_MEM = _ReadThermalIC2_Table[SMBB_Dev2_POLL_DIR].smbdata;
+ 396   1          //-------------------------------------------------------------------------
+ 397   1          HOCMD_B  = SMBB_DEV_CMD;
+ 398   1          TRASLA_B = SMBB_DEV2_ADDR;
+ 399   1      
+ 400   1          if( (SMBB_DEV_CTL&0x01) == 0 )      TRASLA_B |= 0x01;
+ 401   1      
+ 402   1          HOCTL_B  = (SMBB_DEV_CTL&0xFC);     //Start
+ 403   1          SMBB_Dev1_POLL_DIR++;
+ 404   1          bSMBB_GetData = 1;
+ 405   1          SMBB_BYTE_CNT = 0;
+ 406   1          SMBB_DEV_NO   = 2;
+ 407   1      
+ 408   1          return TRUE;
+ 409   1      
+ 410   1      }
+ 411          //-----------------------------------------------------------------------------
+ 412          
+ 413          /* ----------------------------------------------------------------------------
+ 414           * FUNCTION: HandleSMBusData
+ 415           *
+ 416           * ------------------------------------------------------------------------- */
+ 417          bit HandleSMBusData(void)
+ 418          {
+ 419   1          bit bNeedData = 0;
+ 420   1          //-------------------------------------------------------------------------
+ 421   1          if( bSMBA_GetData )
+ 422   1          {
+ 423   2              bNeedData = 1;
+ 424   2              if( (HOSTA_A&0x1C) > 0 || (SMBA_GET_TIMER>20) )
+ 425   2              {   //Failed or Timeout Process
+ 426   3                  if( SMBA_DEV_NO == 1 )
+ 427   3                  {
+C51 COMPILER V7.06   OEM_SMBUS                                                             07/06/2010 09:59:51 PAGE 8   
+
+ 428   4                      SMBA_Dev1_FailCount++;
+ 429   4                      SMBA_Dev1_POLL_DIR = 0;     //Battery Polling Reset
+ 430   4                  }
+ 431   3                  else if( SMBA_DEV_NO == 2 )     SMBA_Dev2_FailCount++;
+ 432   3                  else if( SMBA_DEV_NO == 3 )     SMBA_Dev3_FailCount++;
+ 433   3                  bSMBA_GetData = 0;
+ 434   3                  SMBA_GET_TIMER = 0;
+ 435   3                  bNeedData = 0;
+ 436   3                  HOSTA_A = 0xFE;
+ 437   3                  if( SMBX_ACCESS_CHANNEL == 0x0A )   SMBX_ACCESS_CHANNEL = 0x00;
+ 438   3              }
+ 439   2              else if( (HOSTA_A&0x82) > 0 )
+ 440   2              {
+ 441   3                  if( SMBusDataToMemory(0) )
+ 442   3                  {
+ 443   4                      bSMBA_GetData = 0;
+ 444   4                      SMBA_GET_TIMER = 0;
+ 445   4                      bNeedData = 0;
+ 446   4                  }
+ 447   3                  HOSTA_A = 0xFE;
+ 448   3                  if( SMBX_ACCESS_CHANNEL == 0x0A )   SMBX_ACCESS_CHANNEL = 0x00;
+ 449   3              }
+ 450   2              else
+ 451   2              {
+ 452   3                  if( SMBA_GET_TIMER < 255 )
+ 453   3                  {
+ 454   4                      SMBA_GET_TIMER++;
+ 455   4                  }
+ 456   3              }
+ 457   2          }
+ 458   1          //-------------------------------------------------------------------------
+ 459   1          //if( bSMBB_GetData )
+ 460   1          //{
+ 461   1          //    bNeedData = 1;
+ 462   1          //    if( (HOSTA_B&0x02) > 0 )
+ 463   1          //    {
+ 464   1          //        SMBusDataToMemory( 1, D0REG_B, D1REG_B );
+ 465   1          //        bNeedData = 0;
+ 466   1          //    }
+ 467   1          //}
+ 468   1          //-------------------------------------------------------------------------
+ 469   1          return  bNeedData;
+ 470   1          //-------------------------------------------------------------------------
+ 471   1      }
+ 472          //-----------------------------------------------------------------------------
+ 473          
+ 474          /* ----------------------------------------------------------------------------
+ 475           * FUNCTION: SMBusDataToMemory
+ 476           *
+ 477           * ------------------------------------------------------------------------- */
+ 478          bit SMBusDataToMemory( BYTE SMB_NO )
+ 479          {
+ 480   1          PORT_BYTE_PNTR MemoryPtr;
+ 481   1      
+ 482   1          BYTE SMBX_DEV_CTL, SMB_DAT_L, SMB_DAT_H, SMB_BLK_DAT;
+ 483   1          //-------------------------------------------------------------------------
+ 484   1          if( SMB_NO == 0 )
+ 485   1          {
+ 486   2              MemoryPtr    = (unsigned int*)SMBA_DEV_MEM;
+ 487   2              SMBX_DEV_CTL = SMBA_DEV_CTL;
+ 488   2              SMB_DAT_L    = D0REG_A;
+ 489   2              SMB_DAT_H    = D1REG_A;
+C51 COMPILER V7.06   OEM_SMBUS                                                             07/06/2010 09:59:51 PAGE 9   
+
+ 490   2              if( SMBX_DEV_CTL == _SMB_RD_BLCK )
+ 491   2              {
+ 492   3                  SMB_BLK_DAT  = HOBDB_A;
+ 493   3                  if( SMBA_BYTE_CNT == 0 )
+ 494   3                  {
+ 495   4                      SMBA_BYTE_CNT = SMB_DAT_L;
+ 496   4                      if( SMBA_BYTE_CNT > 32 )    SMBA_BYTE_CNT = 32;
+ 497   4                  }
+ 498   3                  *MemoryPtr = SMB_BLK_DAT;
+ 499   3                  SMBA_DEV_MEM++;
+ 500   3                  SMBA_BYTE_CNT--;
+ 501   3                  if( SMBA_BYTE_CNT > 0 )
+ 502   3                  {
+ 503   4                      if( SMBA_BYTE_CNT == 1 )
+ 504   4                      {
+ 505   5                          HOCTL_A |= 0x20;
+ 506   5                      }
+ 507   4                      return FALSE;
+ 508   4                  }
+ 509   3                  return TRUE;
+ 510   3              }
+ 511   2          }
+ 512   1          //else if( SMB_NO == 1 )       MemoryPtr  = SMBB_DEV_MEM;
+ 513   1          //else if( SMB_NO == 2 )       MemoryPtr  = SMBC_DEV_MEM;
+ 514   1      
+ 515   1      
+ 516   1          //-------------------------------------------------------------------------
+ 517   1          switch( SMBX_DEV_CTL )
+ 518   1          {
+ 519   2              case _SMB_RD_WORD:
+ 520   2                      *MemoryPtr = SMB_DAT_L;
+ 521   2                      MemoryPtr++;
+ 522   2                      *MemoryPtr = SMB_DAT_H;
+ 523   2                      return TRUE;
+ 524   2      
+ 525   2              case _SMB_RD_BYTE:
+ 526   2                      *MemoryPtr = SMB_DAT_L;
+ 527   2                      return TRUE;
+ 528   2      
+ 529   2              default:
+ 530   2                      break;
+ 531   2          }
+ 532   1          //-------------------------------------------------------------------------
+ 533   1          return TRUE;
+ 534   1          //-------------------------------------------------------------------------
+ 535   1      }
+ 536          //-----------------------------------------------------------------------------
+ 537          
+ 538          /*-----------------------------------------------------------------------------
+ 539           * End
+ 540           *---------------------------------------------------------------------------*/
+C51 COMPILER V7.06   OEM_SMBUS                                                             07/06/2010 09:59:51 PAGE 10  
+
+ASSEMBLY LISTING OF GENERATED OBJECT CODE
+
+
+             ; FUNCTION Oem_ACPISMBusviaEC (BEGIN)
+                                           ; SOURCE LINE # 52
+                                           ; SOURCE LINE # 53
+                                           ; SOURCE LINE # 70
+0000 7F00              MOV     R7,#00H
+                                           ; SOURCE LINE # 72
+0002         ?C0001:
+0002 22                RET     
+             ; FUNCTION Oem_ACPISMBusviaEC (END)
+
+             ; FUNCTION SMBusA_Scan_Center (BEGIN)
+                                           ; SOURCE LINE # 78
+                                           ; SOURCE LINE # 79
+                                           ; SOURCE LINE # 81
+0000 20006E      E     JB      bSMBA_GetData,?C0004
+0003 901C00            MOV     DPTR,#01C00H
+0006 E0                MOVX    A,@DPTR
+0007 D3                SETB    C
+0008 9400              SUBB    A,#00H
+000A 5065              JNC     ?C0004
+000C         ?C0002:
+                                           ; SOURCE LINE # 83
+000C 901C0A            MOV     DPTR,#01C0AH
+000F E0                MOVX    A,@DPTR
+0010 5403              ANL     A,#03H
+0012 6403              XRL     A,#03H
+0014 705B              JNZ     ?C0004
+                                           ; SOURCE LINE # 84
+                                           ; SOURCE LINE # 86
+0016         ?C0005:
+                                           ; SOURCE LINE # 88
+0016 900000      E     MOV     DPTR,#SMBA_DEV_DIR
+0019 E0                MOVX    A,@DPTR
+001A 14                DEC     A
+001B 6036              JZ      ?C0013
+001D 04                INC     A
+001E 704C              JNZ     ?C0016
+                                           ; SOURCE LINE # 89
+                                           ; SOURCE LINE # 90
+0020         ?C0007:
+0020 900000      E     MOV     DPTR,#SMBA_DEV_STATUS
+0023 E0                MOVX    A,@DPTR
+0024 30E025            JNB     ACC.0,?C0008
+                                           ; SOURCE LINE # 91
+                                           ; SOURCE LINE # 92
+0027 900000      E     MOV     DPTR,#SMBA_Dev1_POLL_SPEED
+002A E0                MOVX    A,@DPTR
+002B D3                SETB    C
+002C 9400              SUBB    A,#00H
+002E 4005              JC      ?C0009
+                                           ; SOURCE LINE # 93
+                                           ; SOURCE LINE # 94
+0030 E0                MOVX    A,@DPTR
+0031 14                DEC     A
+0032 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 95
+0033 8017              SJMP    ?C0008
+0035         ?C0009:
+                                           ; SOURCE LINE # 97
+C51 COMPILER V7.06   OEM_SMBUS                                                             07/06/2010 09:59:51 PAGE 11  
+
+                                           ; SOURCE LINE # 98
+0035 120000      R     LCALL   SMBusA_Device1
+                                           ; SOURCE LINE # 99
+0038 900000      E     MOV     DPTR,#SMBA_DEV_STATUS
+003B E0                MOVX    A,@DPTR
+003C C3                CLR     C
+003D 13                RRC     A
+003E 900000      E     MOV     DPTR,#SMBA_Dev1_POLL_SPEED
+0041 30E005            JNB     ACC.0,?C0011
+                                           ; SOURCE LINE # 100
+                                           ; SOURCE LINE # 101
+0044 7414              MOV     A,#014H
+0046 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 102
+0047 8003              SJMP    ?C0008
+0049         ?C0011:
+                                           ; SOURCE LINE # 104
+                                           ; SOURCE LINE # 105
+0049 7401              MOV     A,#01H
+004B F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 106
+                                           ; SOURCE LINE # 107
+                                           ; SOURCE LINE # 108
+004C         ?C0008:
+                                           ; SOURCE LINE # 109
+004C 900000      E     MOV     DPTR,#SMBA_DEV_DIR
+004F 7401              MOV     A,#01H
+0051 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 110
+0052 22                RET     
+                                           ; SOURCE LINE # 112
+0053         ?C0013:
+0053 900000      E     MOV     DPTR,#SMBA_Dev2_POLL_SPEED
+0056 E0                MOVX    A,@DPTR
+0057 D3                SETB    C
+0058 9400              SUBB    A,#00H
+005A 4005              JC      ?C0014
+                                           ; SOURCE LINE # 113
+                                           ; SOURCE LINE # 114
+005C E0                MOVX    A,@DPTR
+005D 14                DEC     A
+005E F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 115
+005F 800B              SJMP    ?C0071
+0061         ?C0014:
+                                           ; SOURCE LINE # 117
+                                           ; SOURCE LINE # 118
+0061 120000      R     LCALL   SMBusA_Device2
+                                           ; SOURCE LINE # 119
+0064 900000      E     MOV     DPTR,#SMBA_Dev2_POLL_SPEED
+0067 74C8              MOV     A,#0C8H
+0069 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 120
+006A         ?C0015:
+                                           ; SOURCE LINE # 121
+                                           ; SOURCE LINE # 123
+006A 8000              SJMP    ?C0071
+                                           ; SOURCE LINE # 128
+006C         ?C0016:
+                                           ; SOURCE LINE # 129
+006C         ?C0071:
+006C E4                CLR     A
+C51 COMPILER V7.06   OEM_SMBUS                                                             07/06/2010 09:59:51 PAGE 12  
+
+006D 900000      E     MOV     DPTR,#SMBA_DEV_DIR
+0070 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 130
+                                           ; SOURCE LINE # 131
+                                           ; SOURCE LINE # 133
+0071         ?C0004:
+0071 22                RET     
+             ; FUNCTION SMBusA_Scan_Center (END)
+
+             ; FUNCTION SMBusB_Scan_Center (BEGIN)
+                                           ; SOURCE LINE # 140
+                                           ; SOURCE LINE # 141
+                                           ; SOURCE LINE # 143
+0000 200051      E     JB      bSMBB_GetData,?C0019
+0003 901C11            MOV     DPTR,#01C11H
+0006 E0                MOVX    A,@DPTR
+0007 D3                SETB    C
+0008 9400              SUBB    A,#00H
+000A 5048              JNC     ?C0019
+000C         ?C0017:
+                                           ; SOURCE LINE # 145
+000C 901C1B            MOV     DPTR,#01C1BH
+000F E0                MOVX    A,@DPTR
+0010 5403              ANL     A,#03H
+0012 6403              XRL     A,#03H
+0014 703E              JNZ     ?C0019
+                                           ; SOURCE LINE # 146
+                                           ; SOURCE LINE # 148
+0016         ?C0020:
+                                           ; SOURCE LINE # 150
+0016 900000      E     MOV     DPTR,#SMBB_DEV_DIR
+0019 E0                MOVX    A,@DPTR
+001A 7033              JNZ     ?C0028
+                                           ; SOURCE LINE # 151
+                                           ; SOURCE LINE # 152
+001C         ?C0022:
+                                           ; SOURCE LINE # 153
+001C 900000      E     MOV     DPTR,#SMBB_DEV_STATUS
+001F E0                MOVX    A,@DPTR
+0020 30E025            JNB     ACC.0,?C0023
+                                           ; SOURCE LINE # 154
+                                           ; SOURCE LINE # 155
+0023 900000      E     MOV     DPTR,#SMBB_Dev1_POLL_SPEED
+0026 E0                MOVX    A,@DPTR
+0027 D3                SETB    C
+0028 9400              SUBB    A,#00H
+002A 4005              JC      ?C0024
+                                           ; SOURCE LINE # 156
+                                           ; SOURCE LINE # 157
+002C E0                MOVX    A,@DPTR
+002D 14                DEC     A
+002E F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 158
+002F 8017              SJMP    ?C0023
+0031         ?C0024:
+                                           ; SOURCE LINE # 160
+                                           ; SOURCE LINE # 161
+0031 120000      R     LCALL   SMBusB_Device1
+                                           ; SOURCE LINE # 162
+0034 900000      E     MOV     DPTR,#SMBB_DEV_STATUS
+0037 E0                MOVX    A,@DPTR
+0038 C3                CLR     C
+C51 COMPILER V7.06   OEM_SMBUS                                                             07/06/2010 09:59:51 PAGE 13  
+
+0039 13                RRC     A
+003A 900000      E     MOV     DPTR,#SMBB_Dev1_POLL_SPEED
+003D 30E005            JNB     ACC.0,?C0026
+                                           ; SOURCE LINE # 163
+                                           ; SOURCE LINE # 164
+0040 74C8              MOV     A,#0C8H
+0042 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 165
+0043 8003              SJMP    ?C0023
+0045         ?C0026:
+                                           ; SOURCE LINE # 167
+                                           ; SOURCE LINE # 168
+0045 7401              MOV     A,#01H
+0047 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 169
+                                           ; SOURCE LINE # 170
+                                           ; SOURCE LINE # 171
+0048         ?C0023:
+                                           ; SOURCE LINE # 172
+0048 900000      E     MOV     DPTR,#SMBB_DEV_DIR
+004B 7401              MOV     A,#01H
+004D F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 173
+004E 22                RET     
+                                           ; SOURCE LINE # 193
+004F         ?C0028:
+                                           ; SOURCE LINE # 194
+004F E4                CLR     A
+0050 900000      E     MOV     DPTR,#SMBB_DEV_DIR
+0053 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 195
+                                           ; SOURCE LINE # 196
+                                           ; SOURCE LINE # 199
+0054         ?C0019:
+0054 22                RET     
+             ; FUNCTION SMBusB_Scan_Center (END)
+
+             ; FUNCTION SMBusA_Device1 (BEGIN)
+                                           ; SOURCE LINE # 253
+                                           ; SOURCE LINE # 254
+                                           ; SOURCE LINE # 256
+0000 900000      E     MOV     DPTR,#SMBB_DEV_STATUS
+0003 E0                MOVX    A,@DPTR
+0004 C3                CLR     C
+0005 13                RRC     A
+0006 20E051            JB      ACC.0,?C0029
+                                           ; SOURCE LINE # 257
+                                           ; SOURCE LINE # 258
+0009 900000      E     MOV     DPTR,#SMBA_Dev1_POLL_DIR
+000C E0                MOVX    A,@DPTR
+000D C3                CLR     C
+000E 9418              SUBB    A,#018H
+0010 4009              JC      ?C0030
+                                           ; SOURCE LINE # 259
+                                           ; SOURCE LINE # 260
+0012 E4                CLR     A
+0013 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 261
+0014 900000      E     MOV     DPTR,#SMBA_DEV_STATUS
+0017 E0                MOVX    A,@DPTR
+0018 4402              ORL     A,#02H
+001A F0                MOVX    @DPTR,A
+C51 COMPILER V7.06   OEM_SMBUS                                                             07/06/2010 09:59:51 PAGE 14  
+
+                                           ; SOURCE LINE # 262
+001B         ?C0030:
+                                           ; SOURCE LINE # 263
+001B 900000      E     MOV     DPTR,#SMBA_Dev1_POLL_DIR
+001E E0                MOVX    A,@DPTR
+001F 25E0              ADD     A,ACC
+0021 25E0              ADD     A,ACC
+0023 2400        R     ADD     A,#LOW _InitBatteryATable
+0025 F582              MOV     DPL,A
+0027 E4                CLR     A
+0028 3400        R     ADDC    A,#HIGH _InitBatteryATable
+002A F583              MOV     DPH,A
+002C E4                CLR     A
+002D 93                MOVC    A,@A+DPTR
+002E 900000      E     MOV     DPTR,#SMBA_DEV_CTL
+0031 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 264
+0032 900000      E     MOV     DPTR,#SMBA_Dev1_POLL_DIR
+0035 E0                MOVX    A,@DPTR
+0036 25E0              ADD     A,ACC
+0038 25E0              ADD     A,ACC
+003A 2400        R     ADD     A,#LOW _InitBatteryATable+01H
+003C F582              MOV     DPL,A
+003E E4                CLR     A
+003F 3400        R     ADDC    A,#HIGH _InitBatteryATable+01H
+0041 F583              MOV     DPH,A
+0043 E4                CLR     A
+0044 93                MOVC    A,@A+DPTR
+0045 900000      E     MOV     DPTR,#SMBA_DEV_CMD
+0048 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 265
+0049 900000      E     MOV     DPTR,#SMBA_Dev1_POLL_DIR
+004C E0                MOVX    A,@DPTR
+004D 25E0              ADD     A,ACC
+004F 25E0              ADD     A,ACC
+0051 2400        R     ADD     A,#LOW _InitBatteryATable+02H
+0053 F582              MOV     DPL,A
+0055 E4                CLR     A
+0056 3400        R     ADDC    A,#HIGH _InitBatteryATable+02H
+                                           ; SOURCE LINE # 266
+0058 8048              SJMP    ?C0072
+005A         ?C0029:
+                                           ; SOURCE LINE # 268
+                                           ; SOURCE LINE # 269
+005A 900000      E     MOV     DPTR,#SMBA_Dev1_POLL_DIR
+005D E0                MOVX    A,@DPTR
+005E C3                CLR     C
+005F 940C              SUBB    A,#0CH
+0061 4002              JC      ?C0032
+                                           ; SOURCE LINE # 270
+                                           ; SOURCE LINE # 271
+0063 E4                CLR     A
+0064 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 272
+0065         ?C0032:
+                                           ; SOURCE LINE # 273
+0065 900000      E     MOV     DPTR,#SMBA_Dev1_POLL_DIR
+0068 E0                MOVX    A,@DPTR
+0069 25E0              ADD     A,ACC
+006B 25E0              ADD     A,ACC
+006D 2400        R     ADD     A,#LOW _ReadBatteryATable
+006F F582              MOV     DPL,A
+C51 COMPILER V7.06   OEM_SMBUS                                                             07/06/2010 09:59:51 PAGE 15  
+
+0071 E4                CLR     A
+0072 3400        R     ADDC    A,#HIGH _ReadBatteryATable
+0074 F583              MOV     DPH,A
+0076 E4                CLR     A
+0077 93                MOVC    A,@A+DPTR
+0078 900000      E     MOV     DPTR,#SMBA_DEV_CTL
+007B F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 274
+007C 900000      E     MOV     DPTR,#SMBA_Dev1_POLL_DIR
+007F E0                MOVX    A,@DPTR
+0080 25E0              ADD     A,ACC
+0082 25E0              ADD     A,ACC
+0084 2400        R     ADD     A,#LOW _ReadBatteryATable+01H
+0086 F582              MOV     DPL,A
+0088 E4                CLR     A
+0089 3400        R     ADDC    A,#HIGH _ReadBatteryATable+01H
+008B F583              MOV     DPH,A
+008D E4                CLR     A
+008E 93                MOVC    A,@A+DPTR
+008F 900000      E     MOV     DPTR,#SMBA_DEV_CMD
+0092 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 275
+0093 900000      E     MOV     DPTR,#SMBA_Dev1_POLL_DIR
+0096 E0                MOVX    A,@DPTR
+0097 25E0              ADD     A,ACC
+0099 25E0              ADD     A,ACC
+009B 2400        R     ADD     A,#LOW _ReadBatteryATable+02H
+009D F582              MOV     DPL,A
+009F E4                CLR     A
+00A0 3400        R     ADDC    A,#HIGH _ReadBatteryATable+02H
+00A2         ?C0072:
+00A2 F583              MOV     DPH,A
+00A4 E4                CLR     A
+00A5 93                MOVC    A,@A+DPTR
+00A6 FF                MOV     R7,A
+00A7 7401              MOV     A,#01H
+00A9 93                MOVC    A,@A+DPTR
+00AA 900000      E     MOV     DPTR,#SMBA_DEV_MEM
+00AD CF                XCH     A,R7
+00AE F0                MOVX    @DPTR,A
+00AF A3                INC     DPTR
+00B0 EF                MOV     A,R7
+00B1 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 276
+00B2         ?C0031:
+                                           ; SOURCE LINE # 278
+00B2 900000      E     MOV     DPTR,#SMBA_DEV_CMD
+00B5 E0                MOVX    A,@DPTR
+00B6 901C02            MOV     DPTR,#01C02H
+00B9 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 279
+00BA A3                INC     DPTR
+00BB 7416              MOV     A,#016H
+00BD F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 281
+00BE 900000      E     MOV     DPTR,#SMBA_DEV_CTL
+00C1 E0                MOVX    A,@DPTR
+00C2 20E007            JB      ACC.0,?C0033
+00C5 901C03            MOV     DPTR,#01C03H
+00C8 E0                MOVX    A,@DPTR
+00C9 4401              ORL     A,#01H
+00CB F0                MOVX    @DPTR,A
+C51 COMPILER V7.06   OEM_SMBUS                                                             07/06/2010 09:59:51 PAGE 16  
+
+00CC         ?C0033:
+                                           ; SOURCE LINE # 283
+00CC 900000      E     MOV     DPTR,#SMBA_DEV_CTL
+00CF E0                MOVX    A,@DPTR
+00D0 54FC              ANL     A,#0FCH
+00D2 901C01            MOV     DPTR,#01C01H
+00D5 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 284
+00D6 900000      E     MOV     DPTR,#SMBA_Dev1_POLL_DIR
+00D9 E0                MOVX    A,@DPTR
+00DA 04                INC     A
+00DB F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 285
+00DC D200        E     SETB    bSMBA_GetData
+                                           ; SOURCE LINE # 286
+00DE E4                CLR     A
+00DF 900000      E     MOV     DPTR,#SMBA_BYTE_CNT
+00E2 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 287
+00E3 900000      E     MOV     DPTR,#SMBA_DEV_NO
+00E6 04                INC     A
+00E7 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 288
+00E8 D3                SETB    C
+                                           ; SOURCE LINE # 289
+00E9         ?C0034:
+00E9 22                RET     
+             ; FUNCTION SMBusA_Device1 (END)
+
+             ; FUNCTION SMBusA_Device2 (BEGIN)
+                                           ; SOURCE LINE # 345
+                                           ; SOURCE LINE # 346
+                                           ; SOURCE LINE # 348
+0000 7800        E     MOV     R0,#LOW CORE_PMFLAG
+0002 E6                MOV     A,@R0
+0003 20E002            JB      ACC.0,?C0035
+0006 D3                SETB    C
+0007 22                RET     
+0008         ?C0035:
+                                           ; SOURCE LINE # 350
+0008 900000      E     MOV     DPTR,#SMBA_Dev2_POLL_DIR
+000B E0                MOVX    A,@DPTR
+000C C3                CLR     C
+000D 9402              SUBB    A,#02H
+000F 4002              JC      ?C0037
+                                           ; SOURCE LINE # 351
+                                           ; SOURCE LINE # 352
+0011 E4                CLR     A
+0012 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 353
+0013         ?C0037:
+                                           ; SOURCE LINE # 355
+0013 900000      E     MOV     DPTR,#SMBA_Dev2_POLL_DIR
+0016 E0                MOVX    A,@DPTR
+0017 25E0              ADD     A,ACC
+0019 25E0              ADD     A,ACC
+001B 2400        R     ADD     A,#LOW _ReadThermalIC1_Table
+001D F582              MOV     DPL,A
+001F E4                CLR     A
+0020 3400        R     ADDC    A,#HIGH _ReadThermalIC1_Table
+0022 F583              MOV     DPH,A
+0024 E4                CLR     A
+C51 COMPILER V7.06   OEM_SMBUS                                                             07/06/2010 09:59:51 PAGE 17  
+
+0025 93                MOVC    A,@A+DPTR
+0026 900000      E     MOV     DPTR,#SMBA_DEV_CTL
+0029 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 356
+002A 900000      E     MOV     DPTR,#SMBA_Dev2_POLL_DIR
+002D E0                MOVX    A,@DPTR
+002E 25E0              ADD     A,ACC
+0030 25E0              ADD     A,ACC
+0032 2400        R     ADD     A,#LOW _ReadThermalIC1_Table+01H
+0034 F582              MOV     DPL,A
+0036 E4                CLR     A
+0037 3400        R     ADDC    A,#HIGH _ReadThermalIC1_Table+01H
+0039 F583              MOV     DPH,A
+003B E4                CLR     A
+003C 93                MOVC    A,@A+DPTR
+003D 900000      E     MOV     DPTR,#SMBA_DEV_CMD
+0040 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 357
+0041 900000      E     MOV     DPTR,#SMBA_Dev2_POLL_DIR
+0044 E0                MOVX    A,@DPTR
+0045 25E0              ADD     A,ACC
+0047 25E0              ADD     A,ACC
+0049 2400        R     ADD     A,#LOW _ReadThermalIC1_Table+02H
+004B F582              MOV     DPL,A
+004D E4                CLR     A
+004E 3400        R     ADDC    A,#HIGH _ReadThermalIC1_Table+02H
+0050 F583              MOV     DPH,A
+0052 E4                CLR     A
+0053 93                MOVC    A,@A+DPTR
+0054 FF                MOV     R7,A
+0055 7401              MOV     A,#01H
+0057 93                MOVC    A,@A+DPTR
+0058 900000      E     MOV     DPTR,#SMBA_DEV_MEM
+005B CF                XCH     A,R7
+005C F0                MOVX    @DPTR,A
+005D A3                INC     DPTR
+005E EF                MOV     A,R7
+005F F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 358
+0060 900000      E     MOV     DPTR,#SMBA_DEV_CMD
+0063 E0                MOVX    A,@DPTR
+0064 901C02            MOV     DPTR,#01C02H
+0067 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 359
+0068 A3                INC     DPTR
+0069 7498              MOV     A,#098H
+006B F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 361
+006C 900000      E     MOV     DPTR,#SMBA_DEV_CTL
+006F E0                MOVX    A,@DPTR
+0070 20E007            JB      ACC.0,?C0038
+0073 901C03            MOV     DPTR,#01C03H
+0076 E0                MOVX    A,@DPTR
+0077 4401              ORL     A,#01H
+0079 F0                MOVX    @DPTR,A
+007A         ?C0038:
+                                           ; SOURCE LINE # 363
+007A 900000      E     MOV     DPTR,#SMBA_DEV_CTL
+007D E0                MOVX    A,@DPTR
+007E 54FC              ANL     A,#0FCH
+0080 901C01            MOV     DPTR,#01C01H
+0083 F0                MOVX    @DPTR,A
+C51 COMPILER V7.06   OEM_SMBUS                                                             07/06/2010 09:59:51 PAGE 18  
+
+                                           ; SOURCE LINE # 364
+0084 900000      E     MOV     DPTR,#SMBA_Dev2_POLL_DIR
+0087 E0                MOVX    A,@DPTR
+0088 04                INC     A
+0089 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 365
+008A D200        E     SETB    bSMBA_GetData
+                                           ; SOURCE LINE # 366
+008C E4                CLR     A
+008D 900000      E     MOV     DPTR,#SMBA_BYTE_CNT
+0090 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 367
+0091 900000      E     MOV     DPTR,#SMBA_DEV_NO
+0094 7402              MOV     A,#02H
+0096 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 368
+0097 D3                SETB    C
+                                           ; SOURCE LINE # 369
+0098         ?C0036:
+0098 22                RET     
+             ; FUNCTION SMBusA_Device2 (END)
+
+             ; FUNCTION SMBusB_Device1 (BEGIN)
+                                           ; SOURCE LINE # 383
+                                           ; SOURCE LINE # 384
+                                           ; SOURCE LINE # 386
+0000 7800        E     MOV     R0,#LOW CORE_PMFLAG
+0002 E6                MOV     A,@R0
+0003 20E002            JB      ACC.0,?C0039
+0006 D3                SETB    C
+0007 22                RET     
+0008         ?C0039:
+                                           ; SOURCE LINE # 388
+0008 900000      E     MOV     DPTR,#SMBB_Dev1_POLL_DIR
+000B E0                MOVX    A,@DPTR
+000C C3                CLR     C
+000D 9402              SUBB    A,#02H
+000F 4002              JC      ?C0041
+                                           ; SOURCE LINE # 389
+                                           ; SOURCE LINE # 390
+0011 E4                CLR     A
+0012 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 391
+0013         ?C0041:
+                                           ; SOURCE LINE # 393
+0013 900000      E     MOV     DPTR,#SMBB_Dev2_POLL_DIR
+0016 E0                MOVX    A,@DPTR
+0017 25E0              ADD     A,ACC
+0019 25E0              ADD     A,ACC
+001B 2400        R     ADD     A,#LOW _ReadThermalIC2_Table
+001D F582              MOV     DPL,A
+001F E4                CLR     A
+0020 3400        R     ADDC    A,#HIGH _ReadThermalIC2_Table
+0022 F583              MOV     DPH,A
+0024 E4                CLR     A
+0025 93                MOVC    A,@A+DPTR
+0026 900000      E     MOV     DPTR,#SMBB_DEV_CTL
+0029 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 394
+002A 900000      E     MOV     DPTR,#SMBB_Dev2_POLL_DIR
+002D E0                MOVX    A,@DPTR
+002E 25E0              ADD     A,ACC
+C51 COMPILER V7.06   OEM_SMBUS                                                             07/06/2010 09:59:51 PAGE 19  
+
+0030 25E0              ADD     A,ACC
+0032 2400        R     ADD     A,#LOW _ReadThermalIC2_Table+01H
+0034 F582              MOV     DPL,A
+0036 E4                CLR     A
+0037 3400        R     ADDC    A,#HIGH _ReadThermalIC2_Table+01H
+0039 F583              MOV     DPH,A
+003B E4                CLR     A
+003C 93                MOVC    A,@A+DPTR
+003D 900000      E     MOV     DPTR,#SMBB_DEV_CMD
+0040 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 395
+0041 900000      E     MOV     DPTR,#SMBB_Dev2_POLL_DIR
+0044 E0                MOVX    A,@DPTR
+0045 25E0              ADD     A,ACC
+0047 25E0              ADD     A,ACC
+0049 2400        R     ADD     A,#LOW _ReadThermalIC2_Table+02H
+004B F582              MOV     DPL,A
+004D E4                CLR     A
+004E 3400        R     ADDC    A,#HIGH _ReadThermalIC2_Table+02H
+0050 F583              MOV     DPH,A
+0052 E4                CLR     A
+0053 93                MOVC    A,@A+DPTR
+0054 FF                MOV     R7,A
+0055 7401              MOV     A,#01H
+0057 93                MOVC    A,@A+DPTR
+0058 900000      E     MOV     DPTR,#SMBB_DEV_MEM
+005B CF                XCH     A,R7
+005C F0                MOVX    @DPTR,A
+005D A3                INC     DPTR
+005E EF                MOV     A,R7
+005F F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 397
+0060 900000      E     MOV     DPTR,#SMBB_DEV_CMD
+0063 E0                MOVX    A,@DPTR
+0064 901C13            MOV     DPTR,#01C13H
+0067 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 398
+0068 A3                INC     DPTR
+0069 748C              MOV     A,#08CH
+006B F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 400
+006C 900000      E     MOV     DPTR,#SMBB_DEV_CTL
+006F E0                MOVX    A,@DPTR
+0070 20E007            JB      ACC.0,?C0042
+0073 901C14            MOV     DPTR,#01C14H
+0076 E0                MOVX    A,@DPTR
+0077 4401              ORL     A,#01H
+0079 F0                MOVX    @DPTR,A
+007A         ?C0042:
+                                           ; SOURCE LINE # 402
+007A 900000      E     MOV     DPTR,#SMBB_DEV_CTL
+007D E0                MOVX    A,@DPTR
+007E 54FC              ANL     A,#0FCH
+0080 901C12            MOV     DPTR,#01C12H
+0083 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 403
+0084 900000      E     MOV     DPTR,#SMBB_Dev1_POLL_DIR
+0087 E0                MOVX    A,@DPTR
+0088 04                INC     A
+0089 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 404
+008A D200        E     SETB    bSMBB_GetData
+C51 COMPILER V7.06   OEM_SMBUS                                                             07/06/2010 09:59:51 PAGE 20  
+
+                                           ; SOURCE LINE # 405
+008C E4                CLR     A
+008D 900000      E     MOV     DPTR,#SMBB_BYTE_CNT
+0090 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 406
+0091 900000      E     MOV     DPTR,#SMBB_DEV_NO
+0094 7402              MOV     A,#02H
+0096 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 408
+0097 D3                SETB    C
+                                           ; SOURCE LINE # 410
+0098         ?C0040:
+0098 22                RET     
+             ; FUNCTION SMBusB_Device1 (END)
+
+             ; FUNCTION HandleSMBusData (BEGIN)
+                                           ; SOURCE LINE # 417
+                                           ; SOURCE LINE # 418
+                                           ; SOURCE LINE # 419
+0000 C200        R     CLR     bNeedData
+                                           ; SOURCE LINE # 421
+0002 200003      E     JB      bSMBA_GetData,$ + 6H
+0005 020000      R     LJMP    ?C0043
+                                           ; SOURCE LINE # 422
+                                           ; SOURCE LINE # 423
+0008 D200        R     SETB    bNeedData
+                                           ; SOURCE LINE # 424
+000A 901C00            MOV     DPTR,#01C00H
+000D E0                MOVX    A,@DPTR
+000E 541C              ANL     A,#01CH
+0010 D3                SETB    C
+0011 9400              SUBB    A,#00H
+0013 5008              JNC     ?C0045
+0015 900000      E     MOV     DPTR,#SMBA_GET_TIMER
+0018 E0                MOVX    A,@DPTR
+0019 9414              SUBB    A,#014H
+001B 4047              JC      ?C0044
+001D         ?C0045:
+                                           ; SOURCE LINE # 425
+                                           ; SOURCE LINE # 426
+001D 900000      E     MOV     DPTR,#SMBA_DEV_NO
+0020 E0                MOVX    A,@DPTR
+0021 B4010D            CJNE    A,#01H,?C0046
+                                           ; SOURCE LINE # 427
+                                           ; SOURCE LINE # 428
+0024 900000      E     MOV     DPTR,#SMBA_Dev1_FailCount
+0027 E0                MOVX    A,@DPTR
+0028 04                INC     A
+0029 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 429
+002A E4                CLR     A
+002B 900000      E     MOV     DPTR,#SMBA_Dev1_POLL_DIR
+002E F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 430
+002F 8019              SJMP    ?C0047
+0031         ?C0046:
+                                           ; SOURCE LINE # 431
+0031 900000      E     MOV     DPTR,#SMBA_DEV_NO
+0034 E0                MOVX    A,@DPTR
+0035 B40205            CJNE    A,#02H,?C0048
+0038 900000      E     MOV     DPTR,#SMBA_Dev2_FailCount
+003B 800A              SJMP    ?C0073
+C51 COMPILER V7.06   OEM_SMBUS                                                             07/06/2010 09:59:51 PAGE 21  
+
+003D         ?C0048:
+                                           ; SOURCE LINE # 432
+003D 900000      E     MOV     DPTR,#SMBA_DEV_NO
+0040 E0                MOVX    A,@DPTR
+0041 B40306            CJNE    A,#03H,?C0047
+0044 900000      E     MOV     DPTR,#SMBA_Dev3_FailCount
+0047         ?C0073:
+0047 E0                MOVX    A,@DPTR
+0048 04                INC     A
+0049 F0                MOVX    @DPTR,A
+004A         ?C0047:
+                                           ; SOURCE LINE # 433
+004A C200        E     CLR     bSMBA_GetData
+                                           ; SOURCE LINE # 434
+004C E4                CLR     A
+004D 900000      E     MOV     DPTR,#SMBA_GET_TIMER
+0050 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 435
+0051 C200        R     CLR     bNeedData
+                                           ; SOURCE LINE # 436
+0053 901C00            MOV     DPTR,#01C00H
+0056 74FE              MOV     A,#0FEH
+0058 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 437
+0059 900000      E     MOV     DPTR,#SMBX_ACCESS_CHANNEL
+005C E0                MOVX    A,@DPTR
+005D 640A              XRL     A,#0AH
+005F 703B              JNZ     ?C0043
+0061 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 438
+0062 8038              SJMP    ?C0043
+0064         ?C0044:
+                                           ; SOURCE LINE # 439
+0064 901C00            MOV     DPTR,#01C00H
+0067 E0                MOVX    A,@DPTR
+0068 5482              ANL     A,#082H
+006A D3                SETB    C
+006B 9400              SUBB    A,#00H
+006D 4021              JC      ?C0053
+                                           ; SOURCE LINE # 440
+                                           ; SOURCE LINE # 441
+006F E4                CLR     A
+0070 FF                MOV     R7,A
+0071 120000      R     LCALL   _SMBusDataToMemory
+0074 5009              JNC     ?C0054
+                                           ; SOURCE LINE # 442
+                                           ; SOURCE LINE # 443
+0076 C200        E     CLR     bSMBA_GetData
+                                           ; SOURCE LINE # 444
+0078 E4                CLR     A
+0079 900000      E     MOV     DPTR,#SMBA_GET_TIMER
+007C F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 445
+007D C200        R     CLR     bNeedData
+                                           ; SOURCE LINE # 446
+007F         ?C0054:
+                                           ; SOURCE LINE # 447
+007F 901C00            MOV     DPTR,#01C00H
+0082 74FE              MOV     A,#0FEH
+0084 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 448
+0085 900000      E     MOV     DPTR,#SMBX_ACCESS_CHANNEL
+C51 COMPILER V7.06   OEM_SMBUS                                                             07/06/2010 09:59:51 PAGE 22  
+
+0088 E0                MOVX    A,@DPTR
+0089 B40A10            CJNE    A,#0AH,?C0043
+008C E4                CLR     A
+008D F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 449
+008E 800C              SJMP    ?C0043
+0090         ?C0053:
+                                           ; SOURCE LINE # 451
+                                           ; SOURCE LINE # 452
+0090 900000      E     MOV     DPTR,#SMBA_GET_TIMER
+0093 E0                MOVX    A,@DPTR
+0094 C3                CLR     C
+0095 94FF              SUBB    A,#0FFH
+0097 5003              JNC     ?C0043
+                                           ; SOURCE LINE # 453
+                                           ; SOURCE LINE # 454
+0099 E0                MOVX    A,@DPTR
+009A 04                INC     A
+009B F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 455
+                                           ; SOURCE LINE # 456
+                                           ; SOURCE LINE # 457
+009C         ?C0043:
+                                           ; SOURCE LINE # 469
+009C A200        R     MOV     C,bNeedData
+                                           ; SOURCE LINE # 471
+009E         ?C0058:
+009E 22                RET     
+             ; FUNCTION HandleSMBusData (END)
+
+             ; FUNCTION _SMBusDataToMemory (BEGIN)
+                                           ; SOURCE LINE # 478
+;---- Variable 'MemoryPtr' assigned to Register 'R4/R5' ----
+;---- Variable 'SMB_NO' assigned to Register 'R7' ----
+                                           ; SOURCE LINE # 479
+                                           ; SOURCE LINE # 484
+0000 EF                MOV     A,R7
+0001 7071              JNZ     ?C0059
+                                           ; SOURCE LINE # 485
+                                           ; SOURCE LINE # 486
+0003 900000      E     MOV     DPTR,#SMBA_DEV_MEM
+0006 E0                MOVX    A,@DPTR
+0007 FE                MOV     R6,A
+0008 A3                INC     DPTR
+0009 E0                MOVX    A,@DPTR
+000A AC06              MOV     R4,AR6
+000C FD                MOV     R5,A
+                                           ; SOURCE LINE # 487
+000D 900000      E     MOV     DPTR,#SMBA_DEV_CTL
+0010 E0                MOVX    A,@DPTR
+0011 900000      R     MOV     DPTR,#SMBX_DEV_CTL
+0014 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 488
+0015 901C04            MOV     DPTR,#01C04H
+0018 E0                MOVX    A,@DPTR
+0019 900000      R     MOV     DPTR,#SMB_DAT_L
+001C F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 489
+001D 901C05            MOV     DPTR,#01C05H
+0020 E0                MOVX    A,@DPTR
+0021 900000      R     MOV     DPTR,#SMB_DAT_H
+0024 F0                MOVX    @DPTR,A
+C51 COMPILER V7.06   OEM_SMBUS                                                             07/06/2010 09:59:51 PAGE 23  
+
+                                           ; SOURCE LINE # 490
+0025 900000      R     MOV     DPTR,#SMBX_DEV_CTL
+0028 E0                MOVX    A,@DPTR
+0029 6454              XRL     A,#054H
+002B 7047              JNZ     ?C0059
+                                           ; SOURCE LINE # 491
+                                           ; SOURCE LINE # 492
+002D 901C06            MOV     DPTR,#01C06H
+0030 E0                MOVX    A,@DPTR
+0031 FF                MOV     R7,A
+;---- Variable 'SMB_BLK_DAT' assigned to Register 'R7' ----
+                                           ; SOURCE LINE # 493
+0032 900000      E     MOV     DPTR,#SMBA_BYTE_CNT
+0035 E0                MOVX    A,@DPTR
+0036 7011              JNZ     ?C0061
+                                           ; SOURCE LINE # 494
+                                           ; SOURCE LINE # 495
+0038 900000      R     MOV     DPTR,#SMB_DAT_L
+003B E0                MOVX    A,@DPTR
+003C 900000      E     MOV     DPTR,#SMBA_BYTE_CNT
+003F F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 496
+0040 E0                MOVX    A,@DPTR
+0041 D3                SETB    C
+0042 9420              SUBB    A,#020H
+0044 4003              JC      ?C0061
+0046 7420              MOV     A,#020H
+0048 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 497
+0049         ?C0061:
+                                           ; SOURCE LINE # 498
+0049 8D82              MOV     DPL,R5
+004B 8C83              MOV     DPH,R4
+004D EF                MOV     A,R7
+004E F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 499
+004F 900000      E     MOV     DPTR,#SMBA_DEV_MEM
+0052 E4                CLR     A
+0053 75F001            MOV     B,#01H
+0056 120000      E     LCALL   ?C?IILDX
+                                           ; SOURCE LINE # 500
+0059 900000      E     MOV     DPTR,#SMBA_BYTE_CNT
+005C E0                MOVX    A,@DPTR
+005D 14                DEC     A
+005E F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 501
+005F E0                MOVX    A,@DPTR
+0060 D3                SETB    C
+0061 9400              SUBB    A,#00H
+0063 400D              JC      ?C0063
+                                           ; SOURCE LINE # 502
+                                           ; SOURCE LINE # 503
+0065 E0                MOVX    A,@DPTR
+0066 B40107            CJNE    A,#01H,?C0064
+                                           ; SOURCE LINE # 504
+                                           ; SOURCE LINE # 505
+0069 901C01            MOV     DPTR,#01C01H
+006C E0                MOVX    A,@DPTR
+006D 4420              ORL     A,#020H
+006F F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 506
+0070         ?C0064:
+C51 COMPILER V7.06   OEM_SMBUS                                                             07/06/2010 09:59:51 PAGE 24  
+
+                                           ; SOURCE LINE # 507
+0070 C3                CLR     C
+0071 22                RET     
+                                           ; SOURCE LINE # 508
+0072         ?C0063:
+                                           ; SOURCE LINE # 509
+0072 D3                SETB    C
+0073 22                RET     
+                                           ; SOURCE LINE # 510
+                                           ; SOURCE LINE # 511
+0074         ?C0059:
+                                           ; SOURCE LINE # 517
+0074 900000      R     MOV     DPTR,#SMBX_DEV_CTL
+0077 E0                MOVX    A,@DPTR
+0078 24B8              ADD     A,#0B8H
+007A 6017              JZ      ?C0068
+007C 24FC              ADD     A,#0FCH
+007E 701E              JNZ     ?C0066
+                                           ; SOURCE LINE # 518
+                                           ; SOURCE LINE # 519
+0080         ?C0067:
+                                           ; SOURCE LINE # 520
+0080 900000      R     MOV     DPTR,#SMB_DAT_L
+0083 E0                MOVX    A,@DPTR
+0084 8D82              MOV     DPL,R5
+0086 8C83              MOV     DPH,R4
+0088 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 521
+0089 0D                INC     R5
+008A BD0001            CJNE    R5,#00H,?C0070
+008D 0C                INC     R4
+008E         ?C0070:
+                                           ; SOURCE LINE # 522
+008E 900000      R     MOV     DPTR,#SMB_DAT_H
+                                           ; SOURCE LINE # 523
+0091 8003              SJMP    ?C0074
+                                           ; SOURCE LINE # 525
+0093         ?C0068:
+                                           ; SOURCE LINE # 526
+0093 900000      R     MOV     DPTR,#SMB_DAT_L
+0096         ?C0074:
+0096 E0                MOVX    A,@DPTR
+0097 8D82              MOV     DPL,R5
+0099 8C83              MOV     DPH,R4
+009B F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 527
+009C D3                SETB    C
+009D 22                RET     
+                                           ; SOURCE LINE # 529
+                                           ; SOURCE LINE # 530
+                                           ; SOURCE LINE # 531
+009E         ?C0066:
+                                           ; SOURCE LINE # 533
+009E D3                SETB    C
+                                           ; SOURCE LINE # 535
+009F         ?C0065:
+009F 22                RET     
+             ; FUNCTION _SMBusDataToMemory (END)
+
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+C51 COMPILER V7.06   OEM_SMBUS                                                             07/06/2010 09:59:51 PAGE 25  
+
+   CODE SIZE        =   1061    ----
+   CONSTANT SIZE    =    160    ----
+   XDATA SIZE       =   ----       3
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       1
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,2165 @@
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 1   
+
+
+C51 COMPILER V7.06, COMPILATION OF MODULE CORE_MODULE
+OBJECT MODULE PLACED IN SOURCE\CORE_MODULE.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\c51.exe SOURCE\CORE_MODULE.C LA WL(1) CD OT(8,SIZE) OR
+
+stmt level    source
+
+   1          /*-----------------------------------------------------------------------------
+   2           * Filename: CORE_MODULE.C
+   3           * Function: Kernel MOdule for chip special function
+   4           *
+   5           * [Mudule Description]
+   6           *
+   7           * 01. ADC Module
+   8           * 02. GPIO Module
+   9           * 03. PWN/TCHX Module
+  10           * 04. One-Wired Access Module
+  11           *
+  12           * Copyright (c) 2006-2009, ITE Tech. Inc. All Rights Reserved.
+  13           *---------------------------------------------------------------------------*/
+  14          #include "CORE_INCLUDE.H"
+  15          #include "OEM_INCLUDE.H"
+  16          
+  17          /*-----------------------------------------------------------------------------
+  18           * Local Parameter Definition
+  19           *---------------------------------------------------------------------------*/
+  20          #define T_EGPC_LOOP         0x100
+  21          
+  22          //-----------------------------------------------------------------------------
+  23          /*****************************************************************************/
+  24          /* ADC MODULE ****************************************************************/
+  25          /*****************************************************************************/
+  26          //-----------------------------------------------------------------------------
+  27          //-----------------------------------------------------------------------------
+  28          // Get ADC Pin Data ( 2.2 ~ 2.6mSec )
+  29          //-----------------------------------------------------------------------------
+  30          void vScanADCInput( BYTE VCHNx, BYTE SELINx )
+  31          {
+  32   1          CLEAR_BIT( ADCCFG,0 );  // ADCCFG.Bit0: ADCEN
+  33   1          SET_BIT( ADCCFG,7 );    // ADCCFG.Bit7: FIRHIACC
+  34   1          switch ( VCHNx )
+  35   1          {
+  36   2              case 0:     VCH0CTL = ( SELINx | 0x80 );
+  37   2                          break;
+  38   2              case 1:     VCH1CTL = ( SELINx | 0x80 );
+  39   2                          break;
+  40   2              case 2:     VCH2CTL = ( SELINx | 0x80 );
+  41   2                          break;
+  42   2              case 3:     VCH3CTL = ( SELINx | 0x80 );
+  43   2                          break;
+  44   2              default:
+  45   2                          break;
+  46   2      
+  47   2          }
+  48   1      
+  49   1          CLEAR_BIT( ADCSTS,2 );  // ADCSTS.Bit2: ADCPS
+  50   1          SET_BIT( ADCSTS,1 );    // ADCSTS.Bit1: DOVE
+  51   1          SET_BIT( ADCSTS,0 );    // ADCSTS.Bit0: EOCE
+  52   1          SET_BIT( ADCCFG,0 );    // ADCCFG.Bit0: ADCEN
+  53   1      
+  54   1          ADC_Timer2 = 255;
+  55   1          while ( IS_BIT_CLEAR( ADCSTS, 0 ) ) // ACDSTS.Bit0: EOCE
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 2   
+
+  56   1          {
+  57   2              ADC_Timer2--;
+  58   2      
+  59   2              if ( VCHNx  == 0x00 )
+  60   2              {
+  61   3                  if ( IS_BIT_SET( VCH0CTL,7 ) )  // VCHxCTL.Bit7: DATVAL
+  62   3                  {
+  63   4                      break;
+  64   4                  }
+  65   3                  else if ( ADC_Timer2 == 0 )
+  66   3                  {
+  67   4                      VCH0CTL = 0x1F; // Set Disabled if Failed
+  68   4                      break;
+  69   4                  }
+  70   3      
+  71   3              }
+  72   2              else if ( VCHNx  == 0x01 )
+  73   2              {
+  74   3                  if ( IS_BIT_SET( VCH1CTL,7 ) )  // VCHxCTL.Bit7: DATVAL
+  75   3                  {
+  76   4                      break;
+  77   4                  }
+  78   3                  else if ( ADC_Timer2 == 0 )
+  79   3                  {
+  80   4                      VCH1CTL = 0x1F; // Set Disabled if Failed
+  81   4                      break;
+  82   4                  }
+  83   3              }
+  84   2              else if ( VCHNx  == 0x02 )
+  85   2              {
+  86   3                  if ( IS_BIT_SET( VCH2CTL,7 ) )  // VCHxCTL.Bit7: DATVAL
+  87   3                  {
+  88   4                      break;
+  89   4                  }
+  90   3                  else if ( ADC_Timer2 == 0 )
+  91   3                  {
+  92   4                      VCH2CTL = 0x1F; // Set Disabled if Failed
+  93   4                      break;
+  94   4                  }
+  95   3              }
+  96   2              else if ( VCHNx  == 0x03 )
+  97   2              {
+  98   3                  if ( IS_BIT_SET( VCH3CTL,7 ) )  // VCHxCTL.Bit7: DATVAL
+  99   3                  {
+ 100   4                      break;
+ 101   4                  }
+ 102   3                  else if ( ADC_Timer2 == 0 ) //Check if timeout
+ 103   3                  {
+ 104   4                      VCH3CTL = 0x1F; // Set Disabled if Failed
+ 105   4                      break;
+ 106   4                  }
+ 107   3              }
+ 108   2              else
+ 109   2              {
+ 110   3      
+ 111   3                  break;
+ 112   3              }
+ 113   2      
+ 114   2          }
+ 115   1      
+ 116   1      
+ 117   1      }
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 3   
+
+ 118          
+ 119          //-----------------------------------------------------------------------------
+ 120          // Kernel Auto-Scan ADC
+ 121          //-----------------------------------------------------------------------------
+ 122          void CoreAutoScanADC(void)
+ 123          {
+ 124   1          #if SUPPORTED_CORE_ADC
+ 125   1          if ( ADC_Timer == 0x00 )
+ 126   1          {
+ 127   2              SetAutoScanADC();
+ 128   2              ADC_Timer = T_ADC_Timeout;
+ 129   2              //~250us
+ 130   2              return;
+ 131   2          }
+ 132   1      
+ 133   1          if ( IS_BIT_SET( ADCSTS, 0 ) )  // ACDSTS.Bit0: EOCE
+ 134   1          {
+ 135   2              #if SUPPORTED_VCH0_Scan
+                      GetVoltChnToRAM( VCH0CTL, VCH0DATM, VCH0DATL );
+                      #endif
+ 138   2      
+ 139   2              #if SUPPORTED_VCH1_Scan
+ 140   2              GetVoltChnToRAM( VCH1CTL, VCH1DATM, VCH1DATL );
+ 141   2              #endif
+ 142   2      
+ 143   2              #if SUPPORTED_VCH2_Scan
+ 144   2              GetVoltChnToRAM( VCH2CTL, VCH2DATM, VCH2DATL );
+ 145   2              #endif
+ 146   2      
+ 147   2              #if SUPPORTED_VCH3_Scan
+ 148   2              GetVoltChnToRAM( VCH3CTL, VCH3DATM, VCH3DATL );
+ 149   2              #endif
+ 150   2      
+ 151   2              ADC_Timer = 0;
+ 152   2              //~500us
+ 153   2              return;
+ 154   2          }
+ 155   1          ADC_Timer--;
+ 156   1          #endif
+ 157   1      
+ 158   1      }
+ 159          
+ 160          //-----------------------------------------------------------------------------
+ 161          // Store ADC Scan Results
+ 162          //-----------------------------------------------------------------------------
+ 163          void GetVoltChnToRAM( BYTE VCHxCTL, BYTE VCHxDATM, BYTE VCHxDATL  )
+ 164          {
+ 165   1          #if SUPPORTED_CORE_ADC
+ 166   1          if ( IS_BIT_CLEAR( VCHxCTL,7 ) )    // VCHxCTL.Bit7: DATVAL
+ 167   1          {
+ 168   2              return;
+ 169   2          }
+ 170   1      
+ 171   1          switch( VCHxCTL&0x0F )
+ 172   1          {
+ 173   2              case 0x00:  ADC_0 += ( ((WORD)VCHxDATM << 8) | VCHxDATL );
+ 174   2                          ADC_0 /= 2;     // Average
+ 175   2                          SET_BIT( ADC_FLAG,0 );
+ 176   2                          break;
+ 177   2              case 0x01:  ADC_1 += ( ((WORD)VCHxDATM << 8) | VCHxDATL );
+ 178   2                          ADC_1 /= 2;     // Average
+ 179   2                          SET_BIT( ADC_FLAG,1 );
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 4   
+
+ 180   2                          break;
+ 181   2              case 0x02:  ADC_2 += ( ((WORD)VCHxDATM << 8) | VCHxDATL );
+ 182   2                          ADC_2 /= 2;     // Average
+ 183   2                          SET_BIT( ADC_FLAG,2 );
+ 184   2                          break;
+ 185   2              case 0x03:  ADC_3 += ( ((WORD)VCHxDATM << 8) | VCHxDATL );
+ 186   2                          ADC_3 /= 2;     // Average
+ 187   2                          SET_BIT( ADC_FLAG,3 );
+ 188   2                          break;
+ 189   2              case 0x04:  ADC_4 += ( ((WORD)VCHxDATM << 8) | VCHxDATL );
+ 190   2                          ADC_4 /= 2;     // Average
+ 191   2                          SET_BIT( ADC_FLAG,4 );
+ 192   2                          break;
+ 193   2              case 0x05:  ADC_5 += ( ((WORD)VCHxDATM << 8) | VCHxDATL );
+ 194   2                          ADC_5 /= 2;     // Average
+ 195   2                          SET_BIT( ADC_FLAG,5 );
+ 196   2                          break;
+ 197   2              case 0x06:  ADC_6 += ( ((WORD)VCHxDATM << 8) | VCHxDATL );
+ 198   2                          ADC_6 /= 2;     // Average
+ 199   2                          SET_BIT( ADC_FLAG,6 );
+ 200   2                          break;
+ 201   2              case 0x07:  ADC_7 += ( ((WORD)VCHxDATM << 8) | VCHxDATL );
+ 202   2                          ADC_7 /= 2;     // Average
+ 203   2                          SET_BIT( ADC_FLAG,7 );
+ 204   2                          break;
+ 205   2              case 0x0A:  ADC_VCC += ( ((WORD)VCHxDATM << 8) | VCHxDATL );
+ 206   2                          ADC_VCC /= 2;       // Average
+ 207   2                          SET_BIT( ADC_FLAG2,2 );
+ 208   2                          break;
+ 209   2              case 0x0B:  ADC_VSTBY += ( ((WORD)VCHxDATM << 8) | VCHxDATL );
+ 210   2                          ADC_VSTBY /= 2;     // Average
+ 211   2                          SET_BIT( ADC_FLAG2,3 );
+ 212   2                          break;
+ 213   2              case 0x0C:  ADC_AVCC += ( ((WORD)VCHxDATM << 8) | VCHxDATL );
+ 214   2                          ADC_AVCC /= 2;      // Average
+ 215   2                          SET_BIT( ADC_FLAG2,4 );
+ 216   2                          break;
+ 217   2              case 0x0D:  ADC_VBS += ( ((WORD)VCHxDATM << 8) | VCHxDATL );
+ 218   2                          ADC_VBS /= 2;       // Average
+ 219   2                          SET_BIT( ADC_FLAG2,5 );
+ 220   2                          break;
+ 221   2              default:
+ 222   2      
+ 223   2                          break;
+ 224   2      
+ 225   2          }
+ 226   1          #endif
+ 227   1      
+ 228   1      }
+ 229          
+ 230          //---------------------------------------------------------------------------
+ 231          // Set Auto Scan Voltage Channel
+ 232          //---------------------------------------------------------------------------
+ 233          void SetAutoScanADC(void)
+ 234          {
+ 235   1      
+ 236   1          CLEAR_BIT( ADCCFG,0 );  // ADCCFG.Bit0: ADCEN
+ 237   1          ADCSTS = 0x83;
+ 238   1          CLEAR_BIT( ADCCFG, 0 );     // ADCCFG.Bit0: ADCEN
+ 239   1          SET_BIT( KDCTL, 7 );        // KDCTL.Bit7: AHCE
+ 240   1          CLEAR_BIT( ADCCFG, 5 );     // ADCCFG.Bit5: DFILEN
+ 241   1      
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 5   
+
+ 242   1          #if SUPPORTED_VCH0_Scan
+                  VCH0CTL = SetScanVoltChannel( VCH0CTL, 0 );
+                  #endif
+ 245   1      
+ 246   1          #if SUPPORTED_VCH1_Scan
+ 247   1          VCH1CTL = SetScanVoltChannel( VCH1CTL, 1 );
+ 248   1          #endif
+ 249   1      
+ 250   1          #if SUPPORTED_VCH2_Scan
+ 251   1          VCH2CTL = SetScanVoltChannel( VCH2CTL, 2 );
+ 252   1          #endif
+ 253   1      
+ 254   1          #if SUPPORTED_VCH3_Scan
+ 255   1          VCH3CTL = SetScanVoltChannel( VCH3CTL, 3 );
+ 256   1          #endif
+ 257   1      
+ 258   1          CLEAR_BIT( ADCSTS,2 );  // ADCSTS.Bit2: ADCPS
+ 259   1          SET_BIT( ADCSTS,1 );    // ADCSTS.Bit1: DOVE
+ 260   1          SET_BIT( ADCSTS,0 );    // ADCSTS.Bit0: EOCE
+ 261   1          SET_BIT( ADCCFG,0 );    // ADCCFG.Bit0: ADCEN
+ 262   1      
+ 263   1      
+ 264   1      }
+ 265          
+ 266          /*-----------------------------------------------------------------------------
+ 267           * sScanADC Data Structure
+ 268           *---------------------------------------------------------------------------*/
+ 269          const struct sScanADC code ScanADCSetting[]=
+ 270          {
+ 271              {SetVCH0_ScanA, SetVCH0_ScanB, SetVCH0_ScanC, SetVCH0_ScanD},
+ 272              {SetVCH1_ScanA, SetVCH1_ScanB, SetVCH1_ScanC, SetVCH1_ScanD},
+ 273              {SetVCH2_ScanA, SetVCH2_ScanB, SetVCH2_ScanC, SetVCH2_ScanD},
+ 274              {SetVCH3_ScanA, SetVCH3_ScanB, SetVCH3_ScanC, SetVCH3_ScanD},
+ 275          
+ 276          };
+ 277          
+ 278          //---------------------------------------------------------------------------
+ 279          // Set Scan Voltage Channel
+ 280          //---------------------------------------------------------------------------
+ 281          BYTE SetScanVoltChannel( BYTE VCHxCTL, BYTE ADC_VCHx )
+ 282          {
+ 283   1          #if SUPPORTED_CORE_ADC
+ 284   1      
+ 285   1          if( ( VCHxCTL&0x0F ) == ( (ScanADCSetting[ADC_VCHx].ADC_ScanA)&0x0F ) )
+ 286   1          {
+ 287   2              if ( ScanADCSetting[ADC_VCHx].ADC_ScanB == 0x9F )
+ 288   2              {
+ 289   3                  return 0x9F;
+ 290   3              }
+ 291   2              else
+ 292   2              {
+ 293   3                  return ScanADCSetting[ADC_VCHx].ADC_ScanB;
+ 294   3              }
+ 295   2      
+ 296   2          }
+ 297   1          else if( ( VCHxCTL&0x0F ) == ( (ScanADCSetting[ADC_VCHx].ADC_ScanB)&0x0F ) )
+ 298   1          {
+ 299   2              if ( ScanADCSetting[ADC_VCHx].ADC_ScanC == 0x9F )
+ 300   2              {
+ 301   3                  return ScanADCSetting[ADC_VCHx].ADC_ScanA;
+ 302   3              }
+ 303   2              else
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 6   
+
+ 304   2              {
+ 305   3                  return ScanADCSetting[ADC_VCHx].ADC_ScanC;
+ 306   3              }
+ 307   2          }
+ 308   1          else if( ( VCHxCTL&0x0F ) == ( (ScanADCSetting[ADC_VCHx].ADC_ScanC)&0x0F ) )
+ 309   1          {
+ 310   2              if ( ScanADCSetting[ADC_VCHx].ADC_ScanD == 0x9F )
+ 311   2              {
+ 312   3                  return ScanADCSetting[ADC_VCHx].ADC_ScanA;
+ 313   3              }
+ 314   2              else
+ 315   2              {
+ 316   3                  return ScanADCSetting[ADC_VCHx].ADC_ScanD;
+ 317   3              }
+ 318   2          }
+ 319   1          else
+ 320   1          {
+ 321   2              return ScanADCSetting[ADC_VCHx].ADC_ScanA;
+ 322   2      
+ 323   2          }
+ 324   1          #endif
+ 325   1      
+ 326   1          return  0x9F;
+ 327   1      }
+ 328          
+ 329          //-----------------------------------------------------------------------------
+ 330          /*****************************************************************************/
+ 331          /* GPIO MODULE ***************************************************************/
+ 332          /*****************************************************************************/
+ 333          //-----------------------------------------------------------------------------
+ 334          // ----------------------------------------------------------------------------
+ 335          // Input Signal Debounce function
+ 336          // Input Parameter: PIN_STATUS,_ACTIVE,Counter_ID,ReloadCnt
+ 337          // Return:  ioStatus
+ 338          //      0x00: No Acitve
+ 339          //      0x01: Active
+ 340          //      0x02: Active and Debounced
+ 341          //      0x03: Repeat Active
+ 342          // ----------------------------------------------------------------------------
+ 343          struct inDebounce
+ 344          {   XBYTE   *REG;
+ 345              XBYTE   *Counter;
+ 346              BYTE    FLAG_0;
+ 347              BYTE    FLAG_1;
+ 348          };
+ 349          
+ 350          //-----------------------------------------------------------------------------
+ 351          const struct inDebounce code inDebounce_TBL[] =
+ 352              {
+ 353                  {&DEBOUNCE_FLAG1    ,&DEBOUNCE_CONT0    ,BIT0   ,BIT1   },
+ 354                  {&DEBOUNCE_FLAG1    ,&DEBOUNCE_CONT1    ,BIT2   ,BIT3   },
+ 355                  {&DEBOUNCE_FLAG1    ,&DEBOUNCE_CONT2    ,BIT4   ,BIT5   },
+ 356                  {&DEBOUNCE_FLAG1    ,&DEBOUNCE_CONT3    ,BIT6   ,BIT7   },
+ 357                  {&DEBOUNCE_FLAG2    ,&DEBOUNCE_CONT4    ,BIT0   ,BIT1   },
+ 358                  {&DEBOUNCE_FLAG2    ,&DEBOUNCE_CONT5    ,BIT2   ,BIT3   },
+ 359                  {&DEBOUNCE_FLAG2    ,&DEBOUNCE_CONT6    ,BIT4   ,BIT5   },
+ 360                  {&DEBOUNCE_FLAG2    ,&DEBOUNCE_CONT7    ,BIT6   ,BIT7   }
+ 361              };
+ 362          
+ 363          //-----------------------------------------------------------------------------
+ 364          // Return:  ioStatus
+ 365          //      0x00: No Acitve
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 7   
+
+ 366          //      0x01: Active
+ 367          //      0x02: Active and Debounced
+ 368          //      0x03: Repeat Active
+ 369          //-----------------------------------------------------------------------------
+ 370          BYTE InputDebounce(FLAG PIN_STATUS,FLAG _ACTIVE,BYTE Counter_ID,BYTE ReloadCnt)
+ 371          {
+ 372   1          BYTE    ioStatus = 0x00;
+ 373   1          XBYTE   *in_FlagREG;
+ 374   1          XBYTE   *in_Counter;
+ 375   1          BYTE    in_FLAG_0,in_FLAG_1;
+ 376   1          Counter_ID &= 0x07;
+ 377   1          in_FlagREG = inDebounce_TBL[Counter_ID].REG;
+ 378   1          in_Counter = inDebounce_TBL[Counter_ID].Counter;
+ 379   1          in_FLAG_0  = inDebounce_TBL[Counter_ID].FLAG_0;
+ 380   1          in_FLAG_1  = inDebounce_TBL[Counter_ID].FLAG_1;
+ 381   1          //Check Pin Status
+ 382   1          if( PIN_STATUS == _ACTIVE )
+ 383   1          {   if ( ( (*in_FlagREG) & (in_FLAG_1) ) == 0 )
+ 384   2              {
+ 385   3                  if ( ( (*in_FlagREG) & (in_FLAG_0) ) == 0 )
+ 386   3                  {   (*in_Counter) = ReloadCnt;
+ 387   4                      (*in_FlagREG) |= in_FLAG_0;
+ 388   4                      ioStatus = 0x01;
+ 389   4                  }
+ 390   3                  else
+ 391   3                  {   ioStatus = 0x01;
+ 392   4                      (*in_Counter)--;
+ 393   4      
+ 394   4                      if( (*in_Counter) == 0 )
+ 395   4                      {
+ 396   5                          (*in_FlagREG) |= in_FLAG_1;
+ 397   5                          (*in_FlagREG) &= (~in_FLAG_0);
+ 398   5                          ioStatus = 0x02;
+ 399   5                      }
+ 400   4                  }
+ 401   3              }
+ 402   2              else
+ 403   2              {
+ 404   3                  (*in_FlagREG) |= in_FLAG_0;
+ 405   3                  ioStatus = 0x03;
+ 406   3              }
+ 407   2      
+ 408   2          }
+ 409   1          else
+ 410   1          {
+ 411   2              (*in_Counter) = ReloadCnt;
+ 412   2              (*in_FlagREG) &= ( ~(in_FLAG_0+in_FLAG_1) );
+ 413   2              ioStatus = 0x00;
+ 414   2          }
+ 415   1          return  ioStatus;
+ 416   1      }
+ 417          
+ 418          //-----------------------------------------------------------------------------
+ 419          /*****************************************************************************/
+ 420          /* PWM/TACHX MODULE **********************************************************/
+ 421          /*****************************************************************************/
+ 422          //-----------------------------------------------------------------------------
+ 423          // Calculation Fan Tachometer to Fan Speed (R.P.M)
+ 424          // Fan Speed (R.P.M)=60/(1/fs sec * {FnTMRR,FnTLRR) * P )
+ 425          //-----------------------------------------------------------------------------
+ 426          WORD GetFanRPM(BYTE FnTMRR,BYTE FnTLRR)
+ 427          {
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 8   
+
+ 428   1          WORD  FanRPMSpd, FnTWRR, FanRPMDiv;
+ 429   1      
+ 430   1          FnTWRR = FnTMRR*0x100+FnTLRR;
+ 431   1          // Minimun filter
+ 432   1          if ( FnTWRR == 0x00 || FnTWRR > 0x3FFF )
+ 433   1          {  return 0;       }
+ 434   1          // Maximun filter
+ 435   1          if ( FnTWRR < 128 )
+ 436   1          {  return 9999;  }
+ 437   1      
+ 438   1          FanRPMDiv = _FAN_TACH_BASE1;
+ 439   1          FanRPMSpd = ( FanRPMDiv / FnTWRR )*0x1000;
+ 440   1          FanRPMDiv = ( FanRPMDiv % FnTWRR )*0x10+_FAN_TACH_BASE2;
+ 441   1          FanRPMSpd+= ( FanRPMDiv / FnTWRR )*0x100;
+ 442   1          FanRPMDiv = ( FanRPMDiv % FnTWRR )*0x10+_FAN_TACH_BASE3;
+ 443   1          FanRPMSpd+= ( FanRPMDiv / FnTWRR )*0x10;
+ 444   1          FanRPMDiv = ( FanRPMDiv % FnTWRR )*0x10+_FAN_TACH_BASE4;
+ 445   1          FanRPMSpd+= ( FanRPMDiv / FnTWRR );
+ 446   1      
+ 447   1          return FanRPMSpd;
+ 448   1      
+ 449   1      }
+ 450          //-----------------------------------------------------------------------------
+ 451          
+ 452          //-----------------------------------------------------------------------------
+ 453          /*****************************************************************************/
+ 454          /* EGPC MODULE ***************************************************************/
+ 455          /*****************************************************************************/
+ 456          //-----------------------------------------------------------------------------
+ 457          #if ExternalGPIO_8301
+              //-----------------------------------------------------------------------------
+              // Read External GPIO
+              //-----------------------------------------------------------------------------
+              bit EGPC_Read( BYTE Addr )
+              {
+                  EADDR = Addr;
+              
+                  if( (EDAT >> 5) & 0x01 )
+                      return  TRUE;
+              
+                  return  FALSE;
+              }
+              //-----------------------------------------------------------------------------
+              // Write External GPIO
+              //-----------------------------------------------------------------------------
+              void EGPC_Write( BYTE Addr, BYTE Data )
+              {
+                  BYTE EGPC_TimeOut;
+              
+                  EADDR = Addr;
+                  EDAT  = Data;
+              
+                  EGPC_TimeOut = T_EGPC_LOOP;
+                  while( (ESTS & CDS) == 0 )
+                  {
+                      EGPC_TimeOut--;
+                      if( EGPC_TimeOut == 0 )     break;
+                  }   // Check transfer cycle done
+              }
+              //-----------------------------------------------------------------------------
+              void Set_EGPC( BYTE Addr )
+              {
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 9   
+
+                  BYTE EGPC_TimeOut;
+              
+                  EADDR = Addr;
+                  EDAT |= 0x01;
+              
+                  EGPC_TimeOut = T_EGPC_LOOP;
+                  while( (ESTS & CDS) == 0 )
+                  {
+                      EGPC_TimeOut--;
+                      if( EGPC_TimeOut == 0 )     break;
+                  }   // Check transfer cycle done
+              
+              }
+              //-----------------------------------------------------------------------------
+              void Clr_EGPC(BYTE Addr)
+              {
+                  BYTE EGPC_TimeOut;
+              
+                  EADDR = Addr;           // Address
+                  EDAT &= ~0x01;          // Data
+              
+                  EGPC_TimeOut = T_EGPC_LOOP;
+                  while( (ESTS & CDS) == 0 )
+                  {
+                      EGPC_TimeOut--;
+                      if( EGPC_TimeOut == 0 )     break;
+                  }   // Check transfer cycle done
+              }
+              //-----------------------------------------------------------------------------
+              #endif  //ExternalGPIO_8301
+ 520          //-----------------------------------------------------------------------------
+ 521          
+ 522          //-----------------------------------------------------------------------------
+ 523          /*****************************************************************************/
+ 524          /* ONE-WIRE ACCESS MODULE ****************************************************/
+ 525          /*****************************************************************************/
+ 526          //-----------------------------------------------------------------------------
+ 527          
+ 528          #if SUPPORT_ONE_WIRE_MODULE
+              //-----------------------------------------------------------------------------
+              // OneWire Delay
+              //-----------------------------------------------------------------------------
+              void vOneWireDelayuS(BYTE Timer)
+              {
+                  for (;Timer!=0;Timer--)
+                  {   ;   }
+              
+              }
+              //-----------------------------------------------------------------------------
+              // Reset device function
+              //-----------------------------------------------------------------------------
+              BYTE bResetOneWireDevice(void)
+              {
+                  BYTE timeout  = 0x00;
+                  BYTE loopcunt = 0x00;
+              
+                  DCache = 0x03;
+              
+                  OneWireOutput;
+                  OneWireLow;
+                  vOneWireDelayuS( _T_ONE_500 );  // Delay 500 us
+                  OneWireInput;
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 10  
+
+              
+                  while( OneWirePin == 0 )
+                  {
+                      timeout++;
+                      if( timeout > 0xFE )
+                      {
+                          DCache = 0x00;
+                          return(11);
+                      }
+                  }
+              
+                  for( loopcunt=0x00; loopcunt<1; loopcunt++ )
+                  {
+                      if( OneWirePin == 0 )
+                      {
+                          DCache = 0x00;
+                          return(12);
+                      }
+                  }
+                  timeout = 0x00;
+                  while( OneWirePin == 1 )
+                  {
+                      timeout++;
+                      if( timeout > 0xFE )
+                      {
+                          DCache = 0x00;
+                          return(13);
+                      }
+                  }
+              
+                  for( loopcunt=0x00; loopcunt<4; loopcunt++ )    // 80 us loop
+                  {
+                      if( OneWirePin == 1 )
+                      {
+                          DCache = 0x00;
+                          return(14);
+                      }
+                      vOneWireDelayuS( _T_ONE_1us );
+                  }
+                  timeout = 0x00;
+                  while( OneWirePin == 0 )
+                  {
+                      timeout++;
+                      if( timeout > 0xFE )
+                      {
+                          DCache = 0x00;
+                          return(15);
+                      }
+                  }
+              
+                  vOneWireDelayuS( _T_ONE_500 );  // Delay 500 us
+                  DCache = 0x00;
+                  return(0xFF);
+              }
+              
+              //-----------------------------------------------------------------------------
+              // Write one bit function
+              //-----------------------------------------------------------------------------
+              void vOneWireWriteBit( bit OneWirebit )
+              {
+                  OneWireOutput;
+                  OneWireLow;
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 11  
+
+                  OneWirePin=OneWirebit;
+                  vOneWireDelayuS( _T_ONE_WRB );
+                  OneWireInput;
+                  vOneWireDelayuS( _T_ONE_1us );
+              }
+              
+              //-----------------------------------------------------------------------------
+              // Write one byte function
+              //-----------------------------------------------------------------------------
+              void vOneWireWriteByte( BYTE OneWireByte )
+              {
+                  BYTE bitcunt;
+              
+                  DCache = 0x03;
+              
+                  for( bitcunt=0x00; bitcunt<8; bitcunt++ )
+                  {
+                      if( (OneWireByte>>bitcunt) & 0x01 )
+                      vOneWireWriteBit(1);
+                      else
+                      vOneWireWriteBit(0);
+                  }
+              
+                  DCache = 0x00;
+              }
+              
+              //-----------------------------------------------------------------------------
+              // Read one bit function
+              //-----------------------------------------------------------------------------
+              bit vOneWireReadBit(void)
+              {
+                  bit tempdata;
+              
+                  OneWireOutput;
+                  OneWireLow;
+                  OneWireInput;
+                  tempdata=OneWirePin;
+                  vOneWireDelayuS( _T_ONE_RDB );
+                  return( tempdata );
+              }
+              
+              //-----------------------------------------------------------------------------
+              // Read one byte function
+              //-----------------------------------------------------------------------------
+              BYTE vOneWireReadByte(void)
+              {
+                  BYTE bitcout;
+                  BYTE bitdata;
+                  BYTE result=0x00;
+              
+                  DCache = 0x03;
+              
+                  for( bitcout=0x00; bitcout < 8; bitcout++ )
+                  {
+                      bitdata = vOneWireReadBit();
+                      result |= (bitdata<<bitcout);
+                  }
+              
+                  DCache = 0x00;
+                  return(result);
+              }
+              //-----------------------------------------------------------------------------
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 12  
+
+              #endif  //SUPPORT_ONE_WIRE_MODULE
+ 677          //-----------------------------------------------------------------------------
+ 678          
+ 679          /*-----------------------------------------------------------------------------
+ 680           * End
+ 681           *---------------------------------------------------------------------------*/
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 13  
+
+ASSEMBLY LISTING OF GENERATED OBJECT CODE
+
+
+             ; FUNCTION _vScanADCInput (BEGIN)
+                                           ; SOURCE LINE # 30
+;---- Variable 'VCHNx' assigned to Register 'R7' ----
+;---- Variable 'SELINx' assigned to Register 'R5' ----
+                                           ; SOURCE LINE # 31
+                                           ; SOURCE LINE # 32
+0000 901901            MOV     DPTR,#01901H
+0003 E0                MOVX    A,@DPTR
+0004 54FE              ANL     A,#0FEH
+0006 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 33
+0007 E0                MOVX    A,@DPTR
+0008 4480              ORL     A,#080H
+000A F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 34
+000B EF                MOV     A,R7
+000C 14                DEC     A
+000D 6013              JZ      ?C0003
+000F 14                DEC     A
+0010 6019              JZ      ?C0004
+0012 14                DEC     A
+0013 601F              JZ      ?C0005
+0015 2403              ADD     A,#03H
+0017 7022              JNZ     ?C0001
+                                           ; SOURCE LINE # 35
+                                           ; SOURCE LINE # 36
+0019         ?C0002:
+0019 ED                MOV     A,R5
+001A 4480              ORL     A,#080H
+001C 901904            MOV     DPTR,#01904H
+001F F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 37
+0020 8019              SJMP    ?C0001
+                                           ; SOURCE LINE # 38
+0022         ?C0003:
+0022 ED                MOV     A,R5
+0023 4480              ORL     A,#080H
+0025 901906            MOV     DPTR,#01906H
+0028 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 39
+0029 8010              SJMP    ?C0001
+                                           ; SOURCE LINE # 40
+002B         ?C0004:
+002B ED                MOV     A,R5
+002C 4480              ORL     A,#080H
+002E 901909            MOV     DPTR,#01909H
+0031 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 41
+0032 8007              SJMP    ?C0001
+                                           ; SOURCE LINE # 42
+0034         ?C0005:
+0034 ED                MOV     A,R5
+0035 4480              ORL     A,#080H
+0037 90190C            MOV     DPTR,#0190CH
+003A F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 43
+                                           ; SOURCE LINE # 44
+                                           ; SOURCE LINE # 45
+                                           ; SOURCE LINE # 47
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 14  
+
+003B         ?C0001:
+                                           ; SOURCE LINE # 49
+003B 901900            MOV     DPTR,#01900H
+003E E0                MOVX    A,@DPTR
+003F 54FB              ANL     A,#0FBH
+0041 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 50
+0042 E0                MOVX    A,@DPTR
+0043 4402              ORL     A,#02H
+0045 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 51
+0046 E0                MOVX    A,@DPTR
+0047 4401              ORL     A,#01H
+0049 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 52
+004A A3                INC     DPTR
+004B E0                MOVX    A,@DPTR
+004C 4401              ORL     A,#01H
+004E F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 54
+004F 900000      E     MOV     DPTR,#ADC_Timer2
+0052 74FF              MOV     A,#0FFH
+0054 F0                MOVX    @DPTR,A
+0055         ?C0007:
+                                           ; SOURCE LINE # 55
+0055 901900            MOV     DPTR,#01900H
+0058 E0                MOVX    A,@DPTR
+0059 20E05E            JB      ACC.0,?C0029
+                                           ; SOURCE LINE # 56
+                                           ; SOURCE LINE # 57
+005C 900000      E     MOV     DPTR,#ADC_Timer2
+005F E0                MOVX    A,@DPTR
+0060 14                DEC     A
+0061 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 59
+0062 EF                MOV     A,R7
+0063 7012              JNZ     ?C0009
+                                           ; SOURCE LINE # 60
+                                           ; SOURCE LINE # 61
+0065 901904            MOV     DPTR,#01904H
+0068 E0                MOVX    A,@DPTR
+0069 20E74E            JB      ACC.7,?C0029
+                                           ; SOURCE LINE # 62
+                                           ; SOURCE LINE # 63
+                                           ; SOURCE LINE # 64
+006C         ?C0010:
+                                           ; SOURCE LINE # 65
+006C 900000      E     MOV     DPTR,#ADC_Timer2
+006F E0                MOVX    A,@DPTR
+0070 70E3              JNZ     ?C0007
+                                           ; SOURCE LINE # 66
+                                           ; SOURCE LINE # 67
+0072 901904            MOV     DPTR,#01904H
+                                           ; SOURCE LINE # 68
+0075 8040              SJMP    ?C0078
+                                           ; SOURCE LINE # 69
+                                           ; SOURCE LINE # 71
+0077         ?C0009:
+                                           ; SOURCE LINE # 72
+0077 EF                MOV     A,R7
+0078 B40112            CJNE    A,#01H,?C0014
+                                           ; SOURCE LINE # 73
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 15  
+
+                                           ; SOURCE LINE # 74
+007B 901906            MOV     DPTR,#01906H
+007E E0                MOVX    A,@DPTR
+007F 20E738            JB      ACC.7,?C0029
+                                           ; SOURCE LINE # 75
+                                           ; SOURCE LINE # 76
+                                           ; SOURCE LINE # 77
+0082         ?C0015:
+                                           ; SOURCE LINE # 78
+0082 900000      E     MOV     DPTR,#ADC_Timer2
+0085 E0                MOVX    A,@DPTR
+0086 70CD              JNZ     ?C0007
+                                           ; SOURCE LINE # 79
+                                           ; SOURCE LINE # 80
+0088 901906            MOV     DPTR,#01906H
+008B         ?C0076:
+                                           ; SOURCE LINE # 81
+008B 802A              SJMP    ?C0078
+                                           ; SOURCE LINE # 82
+                                           ; SOURCE LINE # 83
+008D         ?C0014:
+                                           ; SOURCE LINE # 84
+008D EF                MOV     A,R7
+008E B40212            CJNE    A,#02H,?C0019
+                                           ; SOURCE LINE # 85
+                                           ; SOURCE LINE # 86
+0091 901909            MOV     DPTR,#01909H
+0094 E0                MOVX    A,@DPTR
+0095 20E722            JB      ACC.7,?C0029
+                                           ; SOURCE LINE # 87
+                                           ; SOURCE LINE # 88
+                                           ; SOURCE LINE # 89
+0098         ?C0020:
+                                           ; SOURCE LINE # 90
+0098 900000      E     MOV     DPTR,#ADC_Timer2
+009B E0                MOVX    A,@DPTR
+009C 70B7              JNZ     ?C0007
+                                           ; SOURCE LINE # 91
+                                           ; SOURCE LINE # 92
+009E 901909            MOV     DPTR,#01909H
+00A1         ?C0077:
+                                           ; SOURCE LINE # 93
+00A1 8014              SJMP    ?C0078
+                                           ; SOURCE LINE # 94
+                                           ; SOURCE LINE # 95
+00A3         ?C0019:
+                                           ; SOURCE LINE # 96
+00A3 EF                MOV     A,R7
+00A4 B40313            CJNE    A,#03H,?C0029
+                                           ; SOURCE LINE # 97
+                                           ; SOURCE LINE # 98
+00A7 90190C            MOV     DPTR,#0190CH
+00AA E0                MOVX    A,@DPTR
+00AB 20E70C            JB      ACC.7,?C0029
+                                           ; SOURCE LINE # 99
+                                           ; SOURCE LINE # 100
+                                           ; SOURCE LINE # 101
+00AE         ?C0025:
+                                           ; SOURCE LINE # 102
+00AE 900000      E     MOV     DPTR,#ADC_Timer2
+00B1 E0                MOVX    A,@DPTR
+00B2 70A1              JNZ     ?C0007
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 16  
+
+                                           ; SOURCE LINE # 103
+                                           ; SOURCE LINE # 104
+00B4 90190C            MOV     DPTR,#0190CH
+00B7         ?C0078:
+00B7 741F              MOV     A,#01FH
+00B9 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 105
+                                           ; SOURCE LINE # 106
+                                           ; SOURCE LINE # 107
+                                           ; SOURCE LINE # 109
+                                           ; SOURCE LINE # 111
+                                           ; SOURCE LINE # 112
+                                           ; SOURCE LINE # 114
+                                           ; SOURCE LINE # 117
+00BA         ?C0029:
+00BA 22                RET     
+             ; FUNCTION _vScanADCInput (END)
+
+             ; FUNCTION CoreAutoScanADC (BEGIN)
+                                           ; SOURCE LINE # 122
+                                           ; SOURCE LINE # 123
+                                           ; SOURCE LINE # 125
+0000 900000      E     MOV     DPTR,#ADC_Timer
+0003 E0                MOVX    A,@DPTR
+0004 700A              JNZ     ?C0030
+                                           ; SOURCE LINE # 126
+                                           ; SOURCE LINE # 127
+0006 120000      R     LCALL   SetAutoScanADC
+                                           ; SOURCE LINE # 128
+0009 900000      E     MOV     DPTR,#ADC_Timer
+000C 7405              MOV     A,#05H
+000E F0                MOVX    @DPTR,A
+000F 22                RET     
+                                           ; SOURCE LINE # 131
+0010         ?C0030:
+                                           ; SOURCE LINE # 133
+0010 901900            MOV     DPTR,#01900H
+0013 E0                MOVX    A,@DPTR
+0014 30E03C            JNB     ACC.0,?C0032
+                                           ; SOURCE LINE # 134
+                                           ; SOURCE LINE # 140
+0017 901906            MOV     DPTR,#01906H
+001A E0                MOVX    A,@DPTR
+001B FF                MOV     R7,A
+001C 901908            MOV     DPTR,#01908H
+001F E0                MOVX    A,@DPTR
+0020 FD                MOV     R5,A
+0021 901907            MOV     DPTR,#01907H
+0024 E0                MOVX    A,@DPTR
+0025 FB                MOV     R3,A
+0026 120000      R     LCALL   _GetVoltChnToRAM
+                                           ; SOURCE LINE # 144
+0029 901909            MOV     DPTR,#01909H
+002C E0                MOVX    A,@DPTR
+002D FF                MOV     R7,A
+002E 90190B            MOV     DPTR,#0190BH
+0031 E0                MOVX    A,@DPTR
+0032 FD                MOV     R5,A
+0033 90190A            MOV     DPTR,#0190AH
+0036 E0                MOVX    A,@DPTR
+0037 FB                MOV     R3,A
+0038 120000      R     LCALL   _GetVoltChnToRAM
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 17  
+
+                                           ; SOURCE LINE # 148
+003B 90190C            MOV     DPTR,#0190CH
+003E E0                MOVX    A,@DPTR
+003F FF                MOV     R7,A
+0040 90190E            MOV     DPTR,#0190EH
+0043 E0                MOVX    A,@DPTR
+0044 FD                MOV     R5,A
+0045 90190D            MOV     DPTR,#0190DH
+0048 E0                MOVX    A,@DPTR
+0049 FB                MOV     R3,A
+004A 120000      R     LCALL   _GetVoltChnToRAM
+                                           ; SOURCE LINE # 151
+004D E4                CLR     A
+004E 900000      E     MOV     DPTR,#ADC_Timer
+0051 F0                MOVX    @DPTR,A
+0052 22                RET     
+                                           ; SOURCE LINE # 154
+0053         ?C0032:
+                                           ; SOURCE LINE # 155
+0053 900000      E     MOV     DPTR,#ADC_Timer
+0056 E0                MOVX    A,@DPTR
+0057 14                DEC     A
+0058 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 158
+0059         ?C0031:
+0059 22                RET     
+             ; FUNCTION CoreAutoScanADC (END)
+
+             ; FUNCTION _GetVoltChnToRAM (BEGIN)
+                                           ; SOURCE LINE # 163
+;---- Variable 'VCHxCTL' assigned to Register 'R7' ----
+;---- Variable 'VCHxDATL' assigned to Register 'R3' ----
+;---- Variable 'VCHxDATM' assigned to Register 'R5' ----
+                                           ; SOURCE LINE # 164
+                                           ; SOURCE LINE # 166
+0000 EF                MOV     A,R7
+0001 20E703            JB      ACC.7,$ + 6H
+0004 020000      R     LJMP    ?C0034
+                                           ; SOURCE LINE # 167
+                                           ; SOURCE LINE # 169
+0007         ?C0033:
+                                           ; SOURCE LINE # 171
+0007 EF                MOV     A,R7
+0008 540F              ANL     A,#0FH
+000A 120000      E     LCALL   ?C?CCASE
+000D 0000        R     DW      ?C0036
+000F 00                DB      00H
+0010 0000        R     DW      ?C0037
+0012 01                DB      01H
+0013 0000        R     DW      ?C0038
+0015 02                DB      02H
+0016 0000        R     DW      ?C0039
+0018 03                DB      03H
+0019 0000        R     DW      ?C0040
+001B 04                DB      04H
+001C 0000        R     DW      ?C0041
+001E 05                DB      05H
+001F 0000        R     DW      ?C0042
+0021 06                DB      06H
+0022 0000        R     DW      ?C0043
+0024 07                DB      07H
+0025 0000        R     DW      ?C0044
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 18  
+
+0027 0A                DB      0AH
+0028 0000        R     DW      ?C0045
+002A 0B                DB      0BH
+002B 0000        R     DW      ?C0046
+002D 0C                DB      0CH
+002E 0000        R     DW      ?C0047
+0030 0D                DB      0DH
+0031 0000              DW      00H
+0033 0000        R     DW      ?C0034
+                                           ; SOURCE LINE # 172
+                                           ; SOURCE LINE # 173
+0035         ?C0036:
+0035 ED                MOV     A,R5
+0036 FE                MOV     R6,A
+0037 EB                MOV     A,R3
+0038 FD                MOV     R5,A
+0039 ED                MOV     A,R5
+003A FF                MOV     R7,A
+003B 900000      E     MOV     DPTR,#ADC_0
+003E EE                MOV     A,R6
+003F 8FF0              MOV     B,R7
+0041 120000      E     LCALL   ?C?IILDX
+                                           ; SOURCE LINE # 174
+0044 900000      E     MOV     DPTR,#ADC_0
+0047 E0                MOVX    A,@DPTR
+0048 C3                CLR     C
+0049 13                RRC     A
+004A F0                MOVX    @DPTR,A
+004B A3                INC     DPTR
+004C E0                MOVX    A,@DPTR
+004D 13                RRC     A
+004E F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 175
+004F 900000      E     MOV     DPTR,#ADC_FLAG
+0052 E0                MOVX    A,@DPTR
+0053 4401              ORL     A,#01H
+0055 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 176
+0056 22                RET     
+                                           ; SOURCE LINE # 177
+0057         ?C0037:
+0057 ED                MOV     A,R5
+0058 FE                MOV     R6,A
+0059 EB                MOV     A,R3
+005A FD                MOV     R5,A
+005B ED                MOV     A,R5
+005C FF                MOV     R7,A
+005D 900000      E     MOV     DPTR,#ADC_1
+0060 EE                MOV     A,R6
+0061 8FF0              MOV     B,R7
+0063 120000      E     LCALL   ?C?IILDX
+                                           ; SOURCE LINE # 178
+0066 900000      E     MOV     DPTR,#ADC_1
+0069 E0                MOVX    A,@DPTR
+006A C3                CLR     C
+006B 13                RRC     A
+006C F0                MOVX    @DPTR,A
+006D A3                INC     DPTR
+006E E0                MOVX    A,@DPTR
+006F 13                RRC     A
+0070 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 179
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 19  
+
+0071 900000      E     MOV     DPTR,#ADC_FLAG
+0074 E0                MOVX    A,@DPTR
+0075 4402              ORL     A,#02H
+0077 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 180
+0078 22                RET     
+                                           ; SOURCE LINE # 181
+0079         ?C0038:
+0079 ED                MOV     A,R5
+007A FE                MOV     R6,A
+007B EB                MOV     A,R3
+007C FD                MOV     R5,A
+007D ED                MOV     A,R5
+007E FF                MOV     R7,A
+007F 900000      E     MOV     DPTR,#ADC_2
+0082 EE                MOV     A,R6
+0083 8FF0              MOV     B,R7
+0085 120000      E     LCALL   ?C?IILDX
+                                           ; SOURCE LINE # 182
+0088 900000      E     MOV     DPTR,#ADC_2
+008B E0                MOVX    A,@DPTR
+008C C3                CLR     C
+008D 13                RRC     A
+008E F0                MOVX    @DPTR,A
+008F A3                INC     DPTR
+0090 E0                MOVX    A,@DPTR
+0091 13                RRC     A
+0092 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 183
+0093 900000      E     MOV     DPTR,#ADC_FLAG
+                                           ; SOURCE LINE # 184
+0096 020000      R     LJMP    ?C0079
+                                           ; SOURCE LINE # 185
+0099         ?C0039:
+0099 ED                MOV     A,R5
+009A FE                MOV     R6,A
+009B EB                MOV     A,R3
+009C FD                MOV     R5,A
+009D ED                MOV     A,R5
+009E FF                MOV     R7,A
+009F 900000      E     MOV     DPTR,#ADC_3
+00A2 EE                MOV     A,R6
+00A3 8FF0              MOV     B,R7
+00A5 120000      E     LCALL   ?C?IILDX
+                                           ; SOURCE LINE # 186
+00A8 900000      E     MOV     DPTR,#ADC_3
+00AB E0                MOVX    A,@DPTR
+00AC C3                CLR     C
+00AD 13                RRC     A
+00AE F0                MOVX    @DPTR,A
+00AF A3                INC     DPTR
+00B0 E0                MOVX    A,@DPTR
+00B1 13                RRC     A
+00B2 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 187
+00B3 900000      E     MOV     DPTR,#ADC_FLAG
+                                           ; SOURCE LINE # 188
+00B6 020000      R     LJMP    ?C0080
+                                           ; SOURCE LINE # 189
+00B9         ?C0040:
+00B9 ED                MOV     A,R5
+00BA FE                MOV     R6,A
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 20  
+
+00BB EB                MOV     A,R3
+00BC FD                MOV     R5,A
+00BD ED                MOV     A,R5
+00BE FF                MOV     R7,A
+00BF 900000      E     MOV     DPTR,#ADC_4
+00C2 EE                MOV     A,R6
+00C3 8FF0              MOV     B,R7
+00C5 120000      E     LCALL   ?C?IILDX
+                                           ; SOURCE LINE # 190
+00C8 900000      E     MOV     DPTR,#ADC_4
+00CB E0                MOVX    A,@DPTR
+00CC C3                CLR     C
+00CD 13                RRC     A
+00CE F0                MOVX    @DPTR,A
+00CF A3                INC     DPTR
+00D0 E0                MOVX    A,@DPTR
+00D1 13                RRC     A
+00D2 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 191
+00D3 900000      E     MOV     DPTR,#ADC_FLAG
+                                           ; SOURCE LINE # 192
+00D6 020000      R     LJMP    ?C0081
+                                           ; SOURCE LINE # 193
+00D9         ?C0041:
+00D9 ED                MOV     A,R5
+00DA FE                MOV     R6,A
+00DB EB                MOV     A,R3
+00DC FD                MOV     R5,A
+00DD ED                MOV     A,R5
+00DE FF                MOV     R7,A
+00DF 900000      E     MOV     DPTR,#ADC_5
+00E2 EE                MOV     A,R6
+00E3 8FF0              MOV     B,R7
+00E5 120000      E     LCALL   ?C?IILDX
+                                           ; SOURCE LINE # 194
+00E8 900000      E     MOV     DPTR,#ADC_5
+00EB E0                MOVX    A,@DPTR
+00EC C3                CLR     C
+00ED 13                RRC     A
+00EE F0                MOVX    @DPTR,A
+00EF A3                INC     DPTR
+00F0 E0                MOVX    A,@DPTR
+00F1 13                RRC     A
+00F2 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 195
+00F3 900000      E     MOV     DPTR,#ADC_FLAG
+                                           ; SOURCE LINE # 196
+00F6 020000      R     LJMP    ?C0082
+                                           ; SOURCE LINE # 197
+00F9         ?C0042:
+00F9 ED                MOV     A,R5
+00FA FE                MOV     R6,A
+00FB EB                MOV     A,R3
+00FC FD                MOV     R5,A
+00FD ED                MOV     A,R5
+00FE FF                MOV     R7,A
+00FF 900000      E     MOV     DPTR,#ADC_6
+0102 EE                MOV     A,R6
+0103 8FF0              MOV     B,R7
+0105 120000      E     LCALL   ?C?IILDX
+                                           ; SOURCE LINE # 198
+0108 900000      E     MOV     DPTR,#ADC_6
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 21  
+
+010B E0                MOVX    A,@DPTR
+010C C3                CLR     C
+010D 13                RRC     A
+010E F0                MOVX    @DPTR,A
+010F A3                INC     DPTR
+0110 E0                MOVX    A,@DPTR
+0111 13                RRC     A
+0112 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 199
+0113 900000      E     MOV     DPTR,#ADC_FLAG
+0116 E0                MOVX    A,@DPTR
+0117 4440              ORL     A,#040H
+0119 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 200
+011A 22                RET     
+                                           ; SOURCE LINE # 201
+011B         ?C0043:
+011B ED                MOV     A,R5
+011C FE                MOV     R6,A
+011D EB                MOV     A,R3
+011E FD                MOV     R5,A
+011F ED                MOV     A,R5
+0120 FF                MOV     R7,A
+0121 900000      E     MOV     DPTR,#ADC_7
+0124 EE                MOV     A,R6
+0125 8FF0              MOV     B,R7
+0127 120000      E     LCALL   ?C?IILDX
+                                           ; SOURCE LINE # 202
+012A 900000      E     MOV     DPTR,#ADC_7
+012D E0                MOVX    A,@DPTR
+012E C3                CLR     C
+012F 13                RRC     A
+0130 F0                MOVX    @DPTR,A
+0131 A3                INC     DPTR
+0132 E0                MOVX    A,@DPTR
+0133 13                RRC     A
+0134 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 203
+0135 900000      E     MOV     DPTR,#ADC_FLAG
+0138 E0                MOVX    A,@DPTR
+0139 4480              ORL     A,#080H
+013B F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 204
+013C 22                RET     
+                                           ; SOURCE LINE # 205
+013D         ?C0044:
+013D ED                MOV     A,R5
+013E FE                MOV     R6,A
+013F EB                MOV     A,R3
+0140 FD                MOV     R5,A
+0141 ED                MOV     A,R5
+0142 FF                MOV     R7,A
+0143 900000      E     MOV     DPTR,#ADC_VCC
+0146 EE                MOV     A,R6
+0147 8FF0              MOV     B,R7
+0149 120000      E     LCALL   ?C?IILDX
+                                           ; SOURCE LINE # 206
+014C 900000      E     MOV     DPTR,#ADC_VCC
+014F E0                MOVX    A,@DPTR
+0150 C3                CLR     C
+0151 13                RRC     A
+0152 F0                MOVX    @DPTR,A
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 22  
+
+0153 A3                INC     DPTR
+0154 E0                MOVX    A,@DPTR
+0155 13                RRC     A
+0156 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 207
+0157 900000      E     MOV     DPTR,#ADC_FLAG2
+015A         ?C0079:
+015A E0                MOVX    A,@DPTR
+015B 4404              ORL     A,#04H
+015D F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 208
+015E 22                RET     
+                                           ; SOURCE LINE # 209
+015F         ?C0045:
+015F ED                MOV     A,R5
+0160 FE                MOV     R6,A
+0161 EB                MOV     A,R3
+0162 FD                MOV     R5,A
+0163 ED                MOV     A,R5
+0164 FF                MOV     R7,A
+0165 900000      E     MOV     DPTR,#ADC_VSTBY
+0168 EE                MOV     A,R6
+0169 8FF0              MOV     B,R7
+016B 120000      E     LCALL   ?C?IILDX
+                                           ; SOURCE LINE # 210
+016E 900000      E     MOV     DPTR,#ADC_VSTBY
+0171 E0                MOVX    A,@DPTR
+0172 C3                CLR     C
+0173 13                RRC     A
+0174 F0                MOVX    @DPTR,A
+0175 A3                INC     DPTR
+0176 E0                MOVX    A,@DPTR
+0177 13                RRC     A
+0178 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 211
+0179 900000      E     MOV     DPTR,#ADC_FLAG2
+017C         ?C0080:
+017C E0                MOVX    A,@DPTR
+017D 4408              ORL     A,#08H
+017F F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 212
+0180 22                RET     
+                                           ; SOURCE LINE # 213
+0181         ?C0046:
+0181 ED                MOV     A,R5
+0182 FE                MOV     R6,A
+0183 EB                MOV     A,R3
+0184 FD                MOV     R5,A
+0185 ED                MOV     A,R5
+0186 FF                MOV     R7,A
+0187 900000      E     MOV     DPTR,#ADC_AVCC
+018A EE                MOV     A,R6
+018B 8FF0              MOV     B,R7
+018D 120000      E     LCALL   ?C?IILDX
+                                           ; SOURCE LINE # 214
+0190 900000      E     MOV     DPTR,#ADC_AVCC
+0193 E0                MOVX    A,@DPTR
+0194 C3                CLR     C
+0195 13                RRC     A
+0196 F0                MOVX    @DPTR,A
+0197 A3                INC     DPTR
+0198 E0                MOVX    A,@DPTR
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 23  
+
+0199 13                RRC     A
+019A F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 215
+019B 900000      E     MOV     DPTR,#ADC_FLAG2
+019E         ?C0081:
+019E E0                MOVX    A,@DPTR
+019F 4410              ORL     A,#010H
+01A1 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 216
+01A2 22                RET     
+                                           ; SOURCE LINE # 217
+01A3         ?C0047:
+01A3 ED                MOV     A,R5
+01A4 FE                MOV     R6,A
+01A5 EB                MOV     A,R3
+01A6 FF                MOV     R7,A
+01A7 900000      E     MOV     DPTR,#ADC_VBS
+01AA EE                MOV     A,R6
+01AB 8FF0              MOV     B,R7
+01AD 120000      E     LCALL   ?C?IILDX
+                                           ; SOURCE LINE # 218
+01B0 900000      E     MOV     DPTR,#ADC_VBS
+01B3 E0                MOVX    A,@DPTR
+01B4 C3                CLR     C
+01B5 13                RRC     A
+01B6 F0                MOVX    @DPTR,A
+01B7 A3                INC     DPTR
+01B8 E0                MOVX    A,@DPTR
+01B9 13                RRC     A
+01BA F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 219
+01BB 900000      E     MOV     DPTR,#ADC_FLAG2
+01BE         ?C0082:
+01BE E0                MOVX    A,@DPTR
+01BF 4420              ORL     A,#020H
+01C1 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 220
+                                           ; SOURCE LINE # 221
+                                           ; SOURCE LINE # 223
+                                           ; SOURCE LINE # 225
+                                           ; SOURCE LINE # 228
+01C2         ?C0034:
+01C2 22                RET     
+             ; FUNCTION _GetVoltChnToRAM (END)
+
+             ; FUNCTION SetAutoScanADC (BEGIN)
+                                           ; SOURCE LINE # 233
+                                           ; SOURCE LINE # 234
+                                           ; SOURCE LINE # 236
+0000 901901            MOV     DPTR,#01901H
+0003 E0                MOVX    A,@DPTR
+0004 54FE              ANL     A,#0FEH
+0006 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 237
+0007 901900            MOV     DPTR,#01900H
+000A 7483              MOV     A,#083H
+000C F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 238
+000D A3                INC     DPTR
+000E E0                MOVX    A,@DPTR
+000F 54FE              ANL     A,#0FEH
+0011 F0                MOVX    @DPTR,A
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 24  
+
+                                           ; SOURCE LINE # 239
+0012 901905            MOV     DPTR,#01905H
+0015 E0                MOVX    A,@DPTR
+0016 4480              ORL     A,#080H
+0018 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 240
+0019 901901            MOV     DPTR,#01901H
+001C E0                MOVX    A,@DPTR
+001D 54DF              ANL     A,#0DFH
+001F F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 247
+0020 901906            MOV     DPTR,#01906H
+0023 E0                MOVX    A,@DPTR
+0024 FF                MOV     R7,A
+0025 7D01              MOV     R5,#01H
+0027 120000      R     LCALL   _SetScanVoltChannel
+002A 901906            MOV     DPTR,#01906H
+002D EF                MOV     A,R7
+002E F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 251
+002F 901909            MOV     DPTR,#01909H
+0032 E0                MOVX    A,@DPTR
+0033 FF                MOV     R7,A
+0034 7D02              MOV     R5,#02H
+0036 120000      R     LCALL   _SetScanVoltChannel
+0039 901909            MOV     DPTR,#01909H
+003C EF                MOV     A,R7
+003D F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 255
+003E 90190C            MOV     DPTR,#0190CH
+0041 E0                MOVX    A,@DPTR
+0042 FF                MOV     R7,A
+0043 7D03              MOV     R5,#03H
+0045 120000      R     LCALL   _SetScanVoltChannel
+0048 90190C            MOV     DPTR,#0190CH
+004B EF                MOV     A,R7
+004C F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 258
+004D 901900            MOV     DPTR,#01900H
+0050 E0                MOVX    A,@DPTR
+0051 54FB              ANL     A,#0FBH
+0053 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 259
+0054 E0                MOVX    A,@DPTR
+0055 4402              ORL     A,#02H
+0057 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 260
+0058 E0                MOVX    A,@DPTR
+0059 4401              ORL     A,#01H
+005B F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 261
+005C A3                INC     DPTR
+005D E0                MOVX    A,@DPTR
+005E 4401              ORL     A,#01H
+0060 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 264
+0061 22                RET     
+             ; FUNCTION SetAutoScanADC (END)
+
+             ; FUNCTION _SetScanVoltChannel (BEGIN)
+                                           ; SOURCE LINE # 281
+;---- Variable 'ADC_VCHx' assigned to Register 'R5' ----
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 25  
+
+;---- Variable 'VCHxCTL' assigned to Register 'R6' ----
+0000 AE07              MOV     R6,AR7
+                                           ; SOURCE LINE # 282
+                                           ; SOURCE LINE # 285
+0002 ED                MOV     A,R5
+0003 25E0              ADD     A,ACC
+0005 25E0              ADD     A,ACC
+0007 2400        R     ADD     A,#LOW ScanADCSetting
+0009 F582              MOV     DPL,A
+000B E4                CLR     A
+000C 3400        R     ADDC    A,#HIGH ScanADCSetting
+000E F583              MOV     DPH,A
+0010 E4                CLR     A
+0011 93                MOVC    A,@A+DPTR
+0012 540F              ANL     A,#0FH
+0014 FF                MOV     R7,A
+0015 EE                MOV     A,R6
+0016 540F              ANL     A,#0FH
+0018 FC                MOV     R4,A
+0019 B5071A            CJNE    A,AR7,?C0050
+                                           ; SOURCE LINE # 286
+                                           ; SOURCE LINE # 287
+001C ED                MOV     A,R5
+001D 25E0              ADD     A,ACC
+001F 25E0              ADD     A,ACC
+0021 2400        R     ADD     A,#LOW ScanADCSetting+01H
+0023 F582              MOV     DPL,A
+0025 E4                CLR     A
+0026 3400        R     ADDC    A,#HIGH ScanADCSetting+01H
+0028 F583              MOV     DPH,A
+002A E4                CLR     A
+002B 93                MOVC    A,@A+DPTR
+002C FB                MOV     R3,A
+002D B49F03            CJNE    A,#09FH,?C0051
+                                           ; SOURCE LINE # 288
+                                           ; SOURCE LINE # 289
+0030 7F9F              MOV     R7,#09FH
+0032 22                RET     
+                                           ; SOURCE LINE # 290
+0033         ?C0051:
+                                           ; SOURCE LINE # 292
+                                           ; SOURCE LINE # 293
+0033 AF03              MOV     R7,AR3
+0035 22                RET     
+                                           ; SOURCE LINE # 294
+                                           ; SOURCE LINE # 296
+0036         ?C0050:
+                                           ; SOURCE LINE # 297
+0036 ED                MOV     A,R5
+0037 25E0              ADD     A,ACC
+0039 25E0              ADD     A,ACC
+003B 2400        R     ADD     A,#LOW ScanADCSetting+01H
+003D F582              MOV     DPL,A
+003F E4                CLR     A
+0040 3400        R     ADDC    A,#HIGH ScanADCSetting+01H
+0042 F583              MOV     DPH,A
+0044 E4                CLR     A
+0045 93                MOVC    A,@A+DPTR
+0046 540F              ANL     A,#0FH
+0048 6C                XRL     A,R4
+0049 7019              JNZ     ?C0055
+                                           ; SOURCE LINE # 298
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 26  
+
+                                           ; SOURCE LINE # 299
+004B ED                MOV     A,R5
+004C 25E0              ADD     A,ACC
+004E 25E0              ADD     A,ACC
+0050 2400        R     ADD     A,#LOW ScanADCSetting+02H
+0052 F582              MOV     DPL,A
+0054 E4                CLR     A
+0055 3400        R     ADDC    A,#HIGH ScanADCSetting+02H
+0057 F583              MOV     DPH,A
+0059 E4                CLR     A
+005A 93                MOVC    A,@A+DPTR
+005B FC                MOV     R4,A
+005C B49F02            CJNE    A,#09FH,?C0056
+                                           ; SOURCE LINE # 300
+                                           ; SOURCE LINE # 301
+005F 8035              SJMP    ?C0084
+                                           ; SOURCE LINE # 302
+0061         ?C0056:
+                                           ; SOURCE LINE # 304
+                                           ; SOURCE LINE # 305
+0061 AF04              MOV     R7,AR4
+0063 22                RET     
+                                           ; SOURCE LINE # 306
+                                           ; SOURCE LINE # 307
+0064         ?C0055:
+                                           ; SOURCE LINE # 308
+0064 ED                MOV     A,R5
+0065 25E0              ADD     A,ACC
+0067 25E0              ADD     A,ACC
+0069 2400        R     ADD     A,#LOW ScanADCSetting+02H
+006B F582              MOV     DPL,A
+006D E4                CLR     A
+006E 3400        R     ADDC    A,#HIGH ScanADCSetting+02H
+0070 F583              MOV     DPH,A
+0072 E4                CLR     A
+0073 93                MOVC    A,@A+DPTR
+0074 540F              ANL     A,#0FH
+0076 FF                MOV     R7,A
+0077 EE                MOV     A,R6
+0078 540F              ANL     A,#0FH
+007A 6F                XRL     A,R7
+007B 7019              JNZ     ?C0059
+                                           ; SOURCE LINE # 309
+                                           ; SOURCE LINE # 310
+007D ED                MOV     A,R5
+007E 25E0              ADD     A,ACC
+0080 25E0              ADD     A,ACC
+0082 2400        R     ADD     A,#LOW ScanADCSetting+03H
+0084 F582              MOV     DPL,A
+0086 E4                CLR     A
+0087 3400        R     ADDC    A,#HIGH ScanADCSetting+03H
+0089 F583              MOV     DPH,A
+008B E4                CLR     A
+008C 93                MOVC    A,@A+DPTR
+008D FE                MOV     R6,A
+008E B49F02            CJNE    A,#09FH,?C0060
+                                           ; SOURCE LINE # 311
+                                           ; SOURCE LINE # 312
+0091         ?C0083:
+0091 8003              SJMP    ?C0084
+                                           ; SOURCE LINE # 313
+0093         ?C0060:
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 27  
+
+                                           ; SOURCE LINE # 315
+                                           ; SOURCE LINE # 316
+0093 AF06              MOV     R7,AR6
+0095 22                RET     
+                                           ; SOURCE LINE # 317
+                                           ; SOURCE LINE # 318
+0096         ?C0059:
+                                           ; SOURCE LINE # 320
+                                           ; SOURCE LINE # 321
+0096         ?C0084:
+0096 ED                MOV     A,R5
+0097 25E0              ADD     A,ACC
+0099 25E0              ADD     A,ACC
+009B 2400        R     ADD     A,#LOW ScanADCSetting
+009D F582              MOV     DPL,A
+009F E4                CLR     A
+00A0 3400        R     ADDC    A,#HIGH ScanADCSetting
+00A2 F583              MOV     DPH,A
+00A4 E4                CLR     A
+00A5 93                MOVC    A,@A+DPTR
+00A6 FF                MOV     R7,A
+00A7 22                RET     
+                                           ; SOURCE LINE # 323
+             ; FUNCTION _SetScanVoltChannel (END)
+
+             ; FUNCTION _InputDebounce (BEGIN)
+                                           ; SOURCE LINE # 370
+0000 900000      R     MOV     DPTR,#PIN_STATUS
+0003 EF                MOV     A,R7
+0004 F0                MOVX    @DPTR,A
+0005 A3                INC     DPTR
+0006 ED                MOV     A,R5
+0007 F0                MOVX    @DPTR,A
+;---- Variable 'Counter_ID' assigned to Register 'R6' ----
+0008 AE03              MOV     R6,AR3
+                                           ; SOURCE LINE # 371
+                                           ; SOURCE LINE # 372
+;---- Variable 'ioStatus' assigned to Register 'R7' ----
+                                           ; SOURCE LINE # 376
+000A EB                MOV     A,R3
+000B 5407              ANL     A,#07H
+000D FE                MOV     R6,A
+                                           ; SOURCE LINE # 377
+000E 75F006            MOV     B,#06H
+0011 A4                MUL     AB
+0012 2400        R     ADD     A,#LOW inDebounce_TBL
+0014 F582              MOV     DPL,A
+0016 E4                CLR     A
+0017 3400        R     ADDC    A,#HIGH inDebounce_TBL
+0019 F583              MOV     DPH,A
+001B E4                CLR     A
+001C 93                MOVC    A,@A+DPTR
+001D FC                MOV     R4,A
+001E 7401              MOV     A,#01H
+0020 93                MOVC    A,@A+DPTR
+0021 FD                MOV     R5,A
+;---- Variable 'in_FlagREG' assigned to Register 'R4/R5' ----
+                                           ; SOURCE LINE # 378
+0022 AB06              MOV     R3,AR6
+0024 EE                MOV     A,R6
+0025 75F006            MOV     B,#06H
+0028 A4                MUL     AB
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 28  
+
+0029 2400        R     ADD     A,#LOW inDebounce_TBL+02H
+002B F582              MOV     DPL,A
+002D E4                CLR     A
+002E 3400        R     ADDC    A,#HIGH inDebounce_TBL+02H
+0030 F583              MOV     DPH,A
+0032 E4                CLR     A
+0033 93                MOVC    A,@A+DPTR
+0034 FB                MOV     R3,A
+0035 7401              MOV     A,#01H
+0037 93                MOVC    A,@A+DPTR
+0038 900000      R     MOV     DPTR,#in_Counter
+003B CB                XCH     A,R3
+003C F0                MOVX    @DPTR,A
+003D A3                INC     DPTR
+003E EB                MOV     A,R3
+003F F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 379
+0040 EE                MOV     A,R6
+0041 75F006            MOV     B,#06H
+0044 A4                MUL     AB
+0045 2400        R     ADD     A,#LOW inDebounce_TBL+04H
+0047 F582              MOV     DPL,A
+0049 E4                CLR     A
+004A 3400        R     ADDC    A,#HIGH inDebounce_TBL+04H
+004C F583              MOV     DPH,A
+004E E4                CLR     A
+004F 93                MOVC    A,@A+DPTR
+;---- Variable 'in_FLAG_0' assigned to Register 'R1' ----
+0050 F9                MOV     R1,A
+                                           ; SOURCE LINE # 380
+0051 EE                MOV     A,R6
+0052 75F006            MOV     B,#06H
+0055 A4                MUL     AB
+0056 2400        R     ADD     A,#LOW inDebounce_TBL+05H
+0058 F582              MOV     DPL,A
+005A E4                CLR     A
+005B 3400        R     ADDC    A,#HIGH inDebounce_TBL+05H
+005D F583              MOV     DPH,A
+005F E4                CLR     A
+0060 93                MOVC    A,@A+DPTR
+0061 900000      R     MOV     DPTR,#in_FLAG_1
+0064 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 382
+0065 900000      R     MOV     DPTR,#_ACTIVE
+0068 E0                MOVX    A,@DPTR
+0069 FE                MOV     R6,A
+006A 900000      R     MOV     DPTR,#PIN_STATUS
+006D E0                MOVX    A,@DPTR
+006E 6E                XRL     A,R6
+006F 707B              JNZ     ?C0063
+                                           ; SOURCE LINE # 383
+0071 8D82              MOV     DPL,R5
+0073 8C83              MOV     DPH,R4
+0075 E0                MOVX    A,@DPTR
+0076 FE                MOV     R6,A
+0077 900000      R     MOV     DPTR,#in_FLAG_1
+007A E0                MOVX    A,@DPTR
+007B FB                MOV     R3,A
+007C EE                MOV     A,R6
+007D 5B                ANL     A,R3
+007E 7061              JNZ     ?C0064
+                                           ; SOURCE LINE # 384
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 29  
+
+                                           ; SOURCE LINE # 385
+0080 8D82              MOV     DPL,R5
+0082 8C83              MOV     DPH,R4
+0084 E0                MOVX    A,@DPTR
+0085 59                ANL     A,R1
+0086 701B              JNZ     ?C0065
+                                           ; SOURCE LINE # 386
+0088 900000      R     MOV     DPTR,#ReloadCnt
+008B E0                MOVX    A,@DPTR
+008C FF                MOV     R7,A
+008D A3                INC     DPTR
+008E E0                MOVX    A,@DPTR
+008F FA                MOV     R2,A
+0090 A3                INC     DPTR
+0091 E0                MOVX    A,@DPTR
+0092 F582              MOV     DPL,A
+0094 8A83              MOV     DPH,R2
+0096 EF                MOV     A,R7
+0097 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 387
+0098 8D82              MOV     DPL,R5
+009A 8C83              MOV     DPH,R4
+009C E0                MOVX    A,@DPTR
+009D 49                ORL     A,R1
+009E F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 388
+009F 7F01              MOV     R7,#01H
+                                           ; SOURCE LINE # 389
+00A1 8073              SJMP    ?C0069
+00A3         ?C0065:
+                                           ; SOURCE LINE # 391
+00A3 7F01              MOV     R7,#01H
+                                           ; SOURCE LINE # 392
+00A5 900000      R     MOV     DPTR,#in_Counter
+00A8 E0                MOVX    A,@DPTR
+00A9 FA                MOV     R2,A
+00AA A3                INC     DPTR
+00AB E0                MOVX    A,@DPTR
+00AC FB                MOV     R3,A
+00AD F582              MOV     DPL,A
+00AF 8A83              MOV     DPH,R2
+00B1 E0                MOVX    A,@DPTR
+00B2 14                DEC     A
+00B3 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 394
+00B4 8B82              MOV     DPL,R3
+00B6 8A83              MOV     DPH,R2
+00B8 E0                MOVX    A,@DPTR
+00B9 705B              JNZ     ?C0069
+                                           ; SOURCE LINE # 395
+                                           ; SOURCE LINE # 396
+00BB 8D82              MOV     DPL,R5
+00BD 8C83              MOV     DPH,R4
+00BF C083              PUSH    DPH
+00C1 C082              PUSH    DPL
+00C3 E0                MOVX    A,@DPTR
+00C4 FF                MOV     R7,A
+00C5 900000      R     MOV     DPTR,#in_FLAG_1
+00C8 E0                MOVX    A,@DPTR
+00C9 FE                MOV     R6,A
+00CA EF                MOV     A,R7
+00CB 4E                ORL     A,R6
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 30  
+
+00CC D082              POP     DPL
+00CE D083              POP     DPH
+00D0 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 397
+00D1 8D82              MOV     DPL,R5
+00D3 8C83              MOV     DPH,R4
+00D5 E0                MOVX    A,@DPTR
+00D6 FF                MOV     R7,A
+00D7 E9                MOV     A,R1
+00D8 F4                CPL     A
+00D9 FE                MOV     R6,A
+00DA EF                MOV     A,R7
+00DB 5E                ANL     A,R6
+00DC F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 398
+00DD 7F02              MOV     R7,#02H
+                                           ; SOURCE LINE # 399
+                                           ; SOURCE LINE # 400
+                                           ; SOURCE LINE # 401
+00DF 8035              SJMP    ?C0069
+00E1         ?C0064:
+                                           ; SOURCE LINE # 403
+                                           ; SOURCE LINE # 404
+00E1 8D82              MOV     DPL,R5
+00E3 8C83              MOV     DPH,R4
+00E5 E0                MOVX    A,@DPTR
+00E6 49                ORL     A,R1
+00E7 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 405
+00E8 7F03              MOV     R7,#03H
+                                           ; SOURCE LINE # 406
+                                           ; SOURCE LINE # 408
+00EA 802A              SJMP    ?C0069
+00EC         ?C0063:
+                                           ; SOURCE LINE # 410
+                                           ; SOURCE LINE # 411
+00EC 900000      R     MOV     DPTR,#ReloadCnt
+00EF E0                MOVX    A,@DPTR
+00F0 FF                MOV     R7,A
+00F1 A3                INC     DPTR
+00F2 E0                MOVX    A,@DPTR
+00F3 FA                MOV     R2,A
+00F4 A3                INC     DPTR
+00F5 E0                MOVX    A,@DPTR
+00F6 F582              MOV     DPL,A
+00F8 8A83              MOV     DPH,R2
+00FA EF                MOV     A,R7
+00FB F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 412
+00FC 8D82              MOV     DPL,R5
+00FE 8C83              MOV     DPH,R4
+0100 C083              PUSH    DPH
+0102 C082              PUSH    DPL
+0104 E0                MOVX    A,@DPTR
+0105 FF                MOV     R7,A
+0106 900000      R     MOV     DPTR,#in_FLAG_1
+0109 E0                MOVX    A,@DPTR
+010A 29                ADD     A,R1
+010B F4                CPL     A
+010C FE                MOV     R6,A
+010D EF                MOV     A,R7
+010E 5E                ANL     A,R6
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 31  
+
+010F D082              POP     DPL
+0111 D083              POP     DPH
+0113 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 413
+0114 E4                CLR     A
+0115 FF                MOV     R7,A
+                                           ; SOURCE LINE # 414
+0116         ?C0069:
+                                           ; SOURCE LINE # 415
+                                           ; SOURCE LINE # 416
+0116         ?C0070:
+0116 22                RET     
+             ; FUNCTION _InputDebounce (END)
+
+             ; FUNCTION _GetFanRPM (BEGIN)
+                                           ; SOURCE LINE # 426
+;---- Variable 'FnTLRR' assigned to Register 'R5' ----
+;---- Variable 'FnTMRR' assigned to Register 'R7' ----
+                                           ; SOURCE LINE # 427
+                                           ; SOURCE LINE # 430
+0000 EF                MOV     A,R7
+0001 FE                MOV     R6,A
+0002 7C00              MOV     R4,#00H
+0004 E4                CLR     A
+0005 2D                ADD     A,R5
+0006 FF                MOV     R7,A
+0007 EC                MOV     A,R4
+0008 3E                ADDC    A,R6
+0009 900000      R     MOV     DPTR,#FnTWRR
+000C F0                MOVX    @DPTR,A
+000D A3                INC     DPTR
+000E EF                MOV     A,R7
+000F F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 432
+0010 900000      R     MOV     DPTR,#FnTWRR
+0013 E0                MOVX    A,@DPTR
+0014 7002              JNZ     ?C0075
+0016 A3                INC     DPTR
+0017 E0                MOVX    A,@DPTR
+0018         ?C0075:
+0018 600F              JZ      ?C0072
+001A D3                SETB    C
+001B 900000      R     MOV     DPTR,#FnTWRR+01H
+001E E0                MOVX    A,@DPTR
+001F 94FF              SUBB    A,#0FFH
+0021 900000      R     MOV     DPTR,#FnTWRR
+0024 E0                MOVX    A,@DPTR
+0025 943F              SUBB    A,#03FH
+0027 4004              JC      ?C0071
+0029         ?C0072:
+                                           ; SOURCE LINE # 433
+0029 E4                CLR     A
+002A FE                MOV     R6,A
+002B FF                MOV     R7,A
+002C 22                RET     
+002D         ?C0071:
+                                           ; SOURCE LINE # 435
+002D C3                CLR     C
+002E 900000      R     MOV     DPTR,#FnTWRR+01H
+0031 E0                MOVX    A,@DPTR
+0032 9480              SUBB    A,#080H
+0034 900000      R     MOV     DPTR,#FnTWRR
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 32  
+
+0037 E0                MOVX    A,@DPTR
+0038 9400              SUBB    A,#00H
+003A 5005              JNC     ?C0074
+                                           ; SOURCE LINE # 436
+003C 7E27              MOV     R6,#027H
+003E 7F0F              MOV     R7,#0FH
+0040 22                RET     
+0041         ?C0074:
+                                           ; SOURCE LINE # 438
+0041 900000      R     MOV     DPTR,#FanRPMDiv
+0044 7402              MOV     A,#02H
+0046 F0                MOVX    @DPTR,A
+0047 A3                INC     DPTR
+0048 740E              MOV     A,#0EH
+004A F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 439
+004B 900000      R     MOV     DPTR,#FnTWRR
+004E E0                MOVX    A,@DPTR
+004F FC                MOV     R4,A
+0050 A3                INC     DPTR
+0051 E0                MOVX    A,@DPTR
+0052 FD                MOV     R5,A
+0053 900000      R     MOV     DPTR,#FanRPMDiv
+0056 E0                MOVX    A,@DPTR
+0057 FE                MOV     R6,A
+0058 A3                INC     DPTR
+0059 E0                MOVX    A,@DPTR
+005A FF                MOV     R7,A
+005B 120000      E     LCALL   ?C?UIDIV
+005E EF                MOV     A,R7
+005F C4                SWAP    A
+0060 54F0              ANL     A,#0F0H
+0062 900000      R     MOV     DPTR,#FanRPMSpd
+0065 F0                MOVX    @DPTR,A
+0066 A3                INC     DPTR
+0067 E4                CLR     A
+0068 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 440
+0069 900000      R     MOV     DPTR,#FnTWRR
+006C E0                MOVX    A,@DPTR
+006D FC                MOV     R4,A
+006E A3                INC     DPTR
+006F E0                MOVX    A,@DPTR
+0070 FD                MOV     R5,A
+0071 900000      R     MOV     DPTR,#FanRPMDiv
+0074 E0                MOVX    A,@DPTR
+0075 FE                MOV     R6,A
+0076 A3                INC     DPTR
+0077 E0                MOVX    A,@DPTR
+0078 FF                MOV     R7,A
+0079 120000      E     LCALL   ?C?UIDIV
+007C ED                MOV     A,R5
+007D C4                SWAP    A
+007E F8                MOV     R0,A
+007F 540F              ANL     A,#0FH
+0081 C8                XCH     A,R0
+0082 68                XRL     A,R0
+0083 FF                MOV     R7,A
+0084 EC                MOV     A,R4
+0085 C4                SWAP    A
+0086 54F0              ANL     A,#0F0H
+0088 48                ORL     A,R0
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 33  
+
+0089 FE                MOV     R6,A
+008A EF                MOV     A,R7
+008B 2406              ADD     A,#06H
+008D FF                MOV     R7,A
+008E E4                CLR     A
+008F 3E                ADDC    A,R6
+0090 900000      R     MOV     DPTR,#FanRPMDiv
+0093 F0                MOVX    @DPTR,A
+0094 A3                INC     DPTR
+0095 EF                MOV     A,R7
+0096 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 441
+0097 900000      R     MOV     DPTR,#FnTWRR
+009A E0                MOVX    A,@DPTR
+009B FC                MOV     R4,A
+009C A3                INC     DPTR
+009D E0                MOVX    A,@DPTR
+009E FD                MOV     R5,A
+009F 900000      R     MOV     DPTR,#FanRPMDiv
+00A2 E0                MOVX    A,@DPTR
+00A3 FE                MOV     R6,A
+00A4 A3                INC     DPTR
+00A5 E0                MOVX    A,@DPTR
+00A6 FF                MOV     R7,A
+00A7 120000      E     LCALL   ?C?UIDIV
+00AA EF                MOV     A,R7
+00AB 900000      R     MOV     DPTR,#FanRPMSpd
+00AE 75F000            MOV     B,#00H
+00B1 120000      E     LCALL   ?C?IILDX
+                                           ; SOURCE LINE # 442
+00B4 900000      R     MOV     DPTR,#FnTWRR
+00B7 E0                MOVX    A,@DPTR
+00B8 FC                MOV     R4,A
+00B9 A3                INC     DPTR
+00BA E0                MOVX    A,@DPTR
+00BB FD                MOV     R5,A
+00BC 900000      R     MOV     DPTR,#FanRPMDiv
+00BF E0                MOVX    A,@DPTR
+00C0 FE                MOV     R6,A
+00C1 A3                INC     DPTR
+00C2 E0                MOVX    A,@DPTR
+00C3 FF                MOV     R7,A
+00C4 120000      E     LCALL   ?C?UIDIV
+00C7 ED                MOV     A,R5
+00C8 C4                SWAP    A
+00C9 F8                MOV     R0,A
+00CA 540F              ANL     A,#0FH
+00CC C8                XCH     A,R0
+00CD 68                XRL     A,R0
+00CE FF                MOV     R7,A
+00CF EC                MOV     A,R4
+00D0 C4                SWAP    A
+00D1 54F0              ANL     A,#0F0H
+00D3 48                ORL     A,R0
+00D4 FE                MOV     R6,A
+00D5 EF                MOV     A,R7
+00D6 240E              ADD     A,#0EH
+00D8 FF                MOV     R7,A
+00D9 E4                CLR     A
+00DA 3E                ADDC    A,R6
+00DB 900000      R     MOV     DPTR,#FanRPMDiv
+00DE F0                MOVX    @DPTR,A
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 34  
+
+00DF A3                INC     DPTR
+00E0 EF                MOV     A,R7
+00E1 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 443
+00E2 900000      R     MOV     DPTR,#FnTWRR
+00E5 E0                MOVX    A,@DPTR
+00E6 FC                MOV     R4,A
+00E7 A3                INC     DPTR
+00E8 E0                MOVX    A,@DPTR
+00E9 FD                MOV     R5,A
+00EA 900000      R     MOV     DPTR,#FanRPMDiv
+00ED E0                MOVX    A,@DPTR
+00EE FE                MOV     R6,A
+00EF A3                INC     DPTR
+00F0 E0                MOVX    A,@DPTR
+00F1 FF                MOV     R7,A
+00F2 120000      E     LCALL   ?C?UIDIV
+00F5 EF                MOV     A,R7
+00F6 C4                SWAP    A
+00F7 F8                MOV     R0,A
+00F8 540F              ANL     A,#0FH
+00FA C8                XCH     A,R0
+00FB 68                XRL     A,R0
+00FC FF                MOV     R7,A
+00FD EE                MOV     A,R6
+00FE C4                SWAP    A
+00FF 54F0              ANL     A,#0F0H
+0101 48                ORL     A,R0
+0102 900000      R     MOV     DPTR,#FanRPMSpd
+0105 8FF0              MOV     B,R7
+0107 120000      E     LCALL   ?C?IILDX
+                                           ; SOURCE LINE # 444
+010A 900000      R     MOV     DPTR,#FnTWRR
+010D E0                MOVX    A,@DPTR
+010E FC                MOV     R4,A
+010F A3                INC     DPTR
+0110 E0                MOVX    A,@DPTR
+0111 FD                MOV     R5,A
+0112 900000      R     MOV     DPTR,#FanRPMDiv
+0115 E0                MOVX    A,@DPTR
+0116 FE                MOV     R6,A
+0117 A3                INC     DPTR
+0118 E0                MOVX    A,@DPTR
+0119 FF                MOV     R7,A
+011A 120000      E     LCALL   ?C?UIDIV
+011D ED                MOV     A,R5
+011E C4                SWAP    A
+011F F8                MOV     R0,A
+0120 540F              ANL     A,#0FH
+0122 C8                XCH     A,R0
+0123 68                XRL     A,R0
+0124 FE                MOV     R6,A
+0125 EC                MOV     A,R4
+0126 C4                SWAP    A
+0127 54F0              ANL     A,#0F0H
+0129 48                ORL     A,R0
+012A 900000      R     MOV     DPTR,#FanRPMDiv
+012D F0                MOVX    @DPTR,A
+012E A3                INC     DPTR
+012F CE                XCH     A,R6
+0130 F0                MOVX    @DPTR,A
+                                           ; SOURCE LINE # 445
+C51 COMPILER V7.06   CORE_MODULE                                                           07/06/2010 09:59:41 PAGE 35  
+
+0131 900000      R     MOV     DPTR,#FnTWRR
+0134 E0                MOVX    A,@DPTR
+0135 FC                MOV     R4,A
+0136 A3                INC     DPTR
+0137 E0                MOVX    A,@DPTR
+0138 FD                MOV     R5,A
+0139 900000      R     MOV     DPTR,#FanRPMDiv
+013C E0                MOVX    A,@DPTR
+013D FE                MOV     R6,A
+013E A3                INC     DPTR
+013F E0                MOVX    A,@DPTR
+0140 FF                MOV     R7,A
+0141 120000      E     LCALL   ?C?UIDIV
+0144 900000      R     MOV     DPTR,#FanRPMSpd
+0147 EE                MOV     A,R6
+0148 8FF0              MOV     B,R7
+014A 120000      E     LCALL   ?C?IILDX
+                                           ; SOURCE LINE # 447
+014D 900000      R     MOV     DPTR,#FanRPMSpd
+0150 E0                MOVX    A,@DPTR
+0151 FE                MOV     R6,A
+0152 A3                INC     DPTR
+0153 E0                MOVX    A,@DPTR
+0154 FF                MOV     R7,A
+                                           ; SOURCE LINE # 449
+0155         ?C0073:
+0155 22                RET     
+             ; FUNCTION _GetFanRPM (END)
+
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1615    ----
+   CONSTANT SIZE    =     64    ----
+   XDATA SIZE       =   ----      13
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
