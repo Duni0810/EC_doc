@@ -1,0 +1,3 @@
+https://www.daimongu.com/2018/01/20/acpi-spec-introduction/   ACPI6.2协议译文网址
+
+https://acpica.org/                                           ACPI 官网，最新的协议版本为6.3
