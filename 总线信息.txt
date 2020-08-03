@@ -1,7 +1,0 @@
-LPC 总线
-
-eSPI 总线
-
-SMBus
-
-PECI　总线
